@@ -1,0 +1,61 @@
+# AAHARNET.AI Backend Dependencies
+# FastAPI and Core Dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+python-dotenv==1.0.0
+
+# Firebase
+firebase-admin==6.4.0
+google-cloud-firestore==2.13.1
+
+# AI and Machine Learning
+prophet==1.1.4
+tensorflow==2.18.0  # Updated to latest available version
+opencv-python==4.8.1.78
+Pillow==10.1.0
+numpy==1.26.3  # Updated for compatibility
+pandas==2.1.4
+scikit-learn==1.3.2
+
+# OR-Tools for Route Optimization
+ortools==9.8.3296
+
+# Translation and NLP
+deep-translator==1.11.4  # Replaced googletrans due to httpx conflict
+transformers==4.36.2
+# torch==2.1.2  # Optional - comment out if issues
+# whisper==1.1.10  # Optional - comment out if issues
+
+# Google Gemini AI
+google-generativeai==0.3.2
+google-auth==2.25.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+
+# Geospatial Analysis
+geopandas==0.14.1
+folium==0.15.0
+shapely==2.0.2
+
+# HTTP Requests and External APIs
+requests==2.31.0
+httpx==0.25.2
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Data Processing
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+
+# Optional: For production deployment
+gunicorn==21.2.0
+redis==5.0.1

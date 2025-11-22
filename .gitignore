@@ -1,0 +1,54 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+@"
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+ENV/
+*.env
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# OS / IDE
+.vscode/
+.DS_Store
+Thumbs.db
+
+"@ > .gitignore
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Firebase Admin Keys
+serviceAccountKey.json
+backend/config/serviceAccountKey.json
