@@ -7,15 +7,19 @@ import { StatsGrid } from "@/components/stats-grid"
 import { ActivityFeed } from "@/components/activity-feed"
 import { DonationChart } from "@/components/donation-chart"
 import { useAuth } from "@/context/AuthContext"
+import { useRole } from "@/hooks/useRole"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
-import { TrendingUp, Users, Package, AlertCircle, Heart, Activity, AlertTriangle, Zap, Shield } from "lucide-react"
+import { DebugRole } from "@/components/debug-role"
+import { TrendingUp, Users, Package, AlertCircle, Heart, Activity, AlertTriangle, Zap, Shield, UserCheck, Building2, Database, RefreshCw } from "lucide-react"
+import Link from "next/link"
 import { useState, useEffect } from "react"
-import { getActiveAlerts, createEmergencyAlert, checkBackendHealth } from "@/utils/api"
+import { getActiveAlerts, createEmergencyAlert, checkBackendHealth, seedData } from "@/utils/api"
 import { toast } from "sonner"
 
 export default function AdminDashboard() {
   const navItems = [
     { label: "Overview", href: "/admin" },
+    { label: "Map", href: "/map" },
     { label: "Users", href: "/admin/users" },
     { label: "Analytics", href: "/admin/analytics" },
     { label: "Emergency", href: "/admin/emergency" },
@@ -23,7 +27,26 @@ export default function AdminDashboard() {
   ]
 
   // Auth & user data
-  const { user, userData, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const { admin, loading: roleLoading } = useRole()
+
+  // Check if user is admin
+  if (!authLoading && !roleLoading && !admin) {
+    return (
+      <DashboardLayout title="Access Denied" navItems={navItems}>
+        <Card className="p-6">
+          <div className="text-center">
+            <Shield className="w-16 h-16 mx-auto mb-4 text-destructive" />
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You need admin privileges to access this page.</p>
+            <div className="mt-4">
+              <DebugRole />
+            </div>
+          </div>
+        </Card>
+      </DashboardLayout>
+    )
+  }
 
   // Real-time platform data
   const { data: allDonations, loading: donationsLoading } = useFirestoreCollection<any>('donations', {
@@ -154,6 +177,21 @@ export default function AdminDashboard() {
       setEmergencyAlerts(alerts || [])
     } catch (error) {
       toast.error('Failed to create emergency alert')
+    }
+  }
+
+  // Seed data handler
+  const handleSeedData = async (force: boolean = false) => {
+    try {
+      toast.loading('Seeding data...', { id: 'seed' })
+      const result = await seedData(force)
+      toast.success(result.message || 'Data seeded successfully!', { id: 'seed' })
+      // Refresh page after a short delay to show new data
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to seed data', { id: 'seed' })
     }
   }
 
@@ -360,16 +398,20 @@ export default function AdminDashboard() {
 
         {/* Admin Actions */}
         <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Admin Controls</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Button 
-              variant="outline" 
-              className="w-full bg-transparent"
-              onClick={() => toast.info('User management coming soon')}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Manage Users
-            </Button>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Admin Controls
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Link href="/admin/users">
+              <Button 
+                variant="outline" 
+                className="w-full bg-transparent"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Manage Users
+              </Button>
+            </Link>
             <Button 
               variant="outline" 
               className="w-full bg-transparent"
@@ -377,6 +419,14 @@ export default function AdminDashboard() {
             >
               <TrendingUp className="w-4 h-4 mr-2" />
               View Analytics
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full bg-primary/10 border-primary/20 hover:bg-primary/20"
+              onClick={() => handleSeedData(false)}
+            >
+              <Database className="w-4 h-4 mr-2" />
+              Seed Data
             </Button>
             <Button 
               variant="destructive" 
@@ -394,6 +444,12 @@ export default function AdminDashboard() {
               <Package className="w-4 h-4 mr-2" />
               System Settings
             </Button>
+          </div>
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              💡 <strong>Tip:</strong> Data is automatically seeded on backend startup if collections are empty. 
+              Use "Seed Data" to manually refresh mock data.
+            </p>
           </div>
         </Card>
 

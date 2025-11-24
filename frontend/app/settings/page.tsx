@@ -21,9 +21,11 @@ export default function SettingsPage() {
     name: '',
     email: '',
     phone: '',
-    userType: 'donor' as 'donor' | 'ngo' | 'volunteer'
+    userType: 'donor' as 'donor' | 'ngo' | 'volunteer',
+    location: null as { lat: number; lng: number } | null
   })
   const [saving, setSaving] = useState(false)
+  const [gettingLocation, setGettingLocation] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -37,10 +39,52 @@ export default function SettingsPage() {
         name: userData.name || '',
         email: userData.email || user?.email || '',
         phone: userData.phone || '',
-        userType: userData.user_type || 'donor'
+        userType: userData.user_type || 'donor',
+        location: userData.location || null
       })
     }
   }, [userData, user])
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+
+    setGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        setFormData({
+          ...formData,
+          location: { lat: latitude, lng: longitude }
+        })
+        toast.success(`Location updated: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+        setGettingLocation(false)
+      },
+      (error) => {
+        let errorMessage = 'Unable to get your location'
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please enable location permissions.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable.'
+            break
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.'
+            break
+        }
+        toast.error(errorMessage)
+        setGettingLocation(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    )
+  }
 
   if (loading) {
     return (
@@ -60,11 +104,18 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateUserData({
+      const updateData: any = {
         name: formData.name,
         phone: formData.phone,
         user_type: formData.userType
-      })
+      }
+      
+      // Include location if available
+      if (formData.location) {
+        updateData.location = formData.location
+      }
+      
+      await updateUserData(updateData)
       toast.success('Profile updated successfully!')
     } catch (error) {
       toast.error('Failed to update profile')
@@ -155,6 +206,45 @@ export default function SettingsPage() {
                       placeholder="+1 234 567 8900"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="location"
+                        value={formData.location 
+                          ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}`
+                          : 'Not set'}
+                        disabled
+                        className="pl-10 bg-muted"
+                        placeholder="Click button to get location"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGetLocation}
+                      disabled={gettingLocation}
+                    >
+                      {gettingLocation ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                          Getting...
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Get Location
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your location helps match you with nearby donations and requests
+                  </p>
                 </div>
 
                 <Button onClick={handleSave} disabled={saving}>

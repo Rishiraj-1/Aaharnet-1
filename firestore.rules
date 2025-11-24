@@ -1,19 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection - users can read/write their own document
+    // Helper function to check if user is admin (from custom claims)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Helper function to get user role (from custom claims)
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    
+    // Users collection - users can read/write their own document, admins can read all
     match /users/{userId} {
-      // Allow read if user is authenticated and requesting their own data
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow read if user is authenticated and requesting their own data, or if admin
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
       // Allow create if user is authenticated and creating their own document
       allow create: if request.auth != null && request.auth.uid == userId;
       
-      // Allow update if user is authenticated and updating their own document
-      allow update: if request.auth != null && request.auth.uid == userId;
+      // Allow update if user is authenticated and updating their own document, or if admin
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
-      // Allow delete if user is authenticated and deleting their own document
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      // Allow delete if user is authenticated and deleting their own document, or if admin
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
     // Donations collection
@@ -21,18 +31,22 @@ service cloud.firestore {
       // Allow read for authenticated users
       allow read: if request.auth != null;
       
-      // Allow create for authenticated users
-      allow create: if request.auth != null;
+      // Allow create for authenticated users (donors create their own donations)
+      allow create: if request.auth != null && 
+                    (request.resource.data.donorId == request.auth.uid || 
+                     request.resource.data.donor_id == request.auth.uid);
       
       // Allow update for the creator or admins
       allow update: if request.auth != null && 
-        (resource.data.donor_id == request.auth.uid || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_type == 'admin');
+                    (resource.data.donorId == request.auth.uid || 
+                     resource.data.donor_id == request.auth.uid ||
+                     isAdmin());
       
       // Allow delete for the creator or admins
       allow delete: if request.auth != null && 
-        (resource.data.donor_id == request.auth.uid || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_type == 'admin');
+                    (resource.data.donorId == request.auth.uid || 
+                     resource.data.donor_id == request.auth.uid ||
+                     isAdmin());
     }
     
     // Requests collection (NGO requests)
@@ -40,18 +54,40 @@ service cloud.firestore {
       // Allow read for authenticated users
       allow read: if request.auth != null;
       
-      // Allow create for authenticated users
-      allow create: if request.auth != null;
+      // Allow create for authenticated users with NGO role or admin
+      allow create: if request.auth != null && 
+                    (getUserRole() == 'ngo' || isAdmin());
       
-      // Allow update for the creator or admins
+      // Allow update for the creator (NGO) or admins
       allow update: if request.auth != null && 
-        (resource.data.ngo_id == request.auth.uid || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_type == 'admin');
+                    ((resource.data.ngoId == request.auth.uid || 
+                      resource.data.ngo_id == request.auth.uid) ||
+                     isAdmin());
       
-      // Allow delete for the creator or admins
+      // Allow delete for the creator (NGO) or admins
       allow delete: if request.auth != null && 
-        (resource.data.ngo_id == request.auth.uid || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_type == 'admin');
+                    ((resource.data.ngoId == request.auth.uid || 
+                      resource.data.ngo_id == request.auth.uid) ||
+                     isAdmin());
+    }
+    
+    // Deliveries collection (volunteer deliveries)
+    match /deliveries/{deliveryId} {
+      // Allow read for authenticated users
+      allow read: if request.auth != null;
+      
+      // Allow create for volunteers or admins
+      allow create: if request.auth != null && 
+                    (getUserRole() == 'volunteer' || isAdmin());
+      
+      // Allow update for the volunteer or admins
+      allow update: if request.auth != null && 
+                    ((resource.data.volunteerId == request.auth.uid || 
+                      resource.data.volunteer_id == request.auth.uid) ||
+                     isAdmin());
+      
+      // Allow delete for admins only
+      allow delete: if request.auth != null && isAdmin();
     }
     
     // Volunteers collection
@@ -64,13 +100,17 @@ service cloud.firestore {
       
       // Allow update for the volunteer or admins
       allow update: if request.auth != null && 
-        (resource.data.volunteer_id == request.auth.uid || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_type == 'admin');
+                    ((resource.data.volunteerId == request.auth.uid || 
+                      resource.data.volunteer_id == request.auth.uid ||
+                      resource.data.userId == request.auth.uid) ||
+                     isAdmin());
       
       // Allow delete for the volunteer or admins
       allow delete: if request.auth != null && 
-        (resource.data.volunteer_id == request.auth.uid || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_type == 'admin');
+                    ((resource.data.volunteerId == request.auth.uid || 
+                      resource.data.volunteer_id == request.auth.uid ||
+                      resource.data.userId == request.auth.uid) ||
+                     isAdmin());
     }
     
     // Default deny all other collections

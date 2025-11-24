@@ -1,54 +1,89 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-@"
 # Python
 venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 env/
 ENV/
-*.env
-
-# Node
-node_modules/
-.next/
+.venv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
 dist/
 build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
 
-# OS / IDE
-.vscode/
-.DS_Store
-Thumbs.db
-
-"@ > .gitignore
-
-# dependencies
-/node_modules
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# debug
+# Node.js / Next.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
 
-# env files
-.env*
-
-# vercel
+# Next.js
+.next/
+out/
+build/
+dist/
 .vercel
-
-# typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# Firebase Admin Keys
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Firebase
 serviceAccountKey.json
-backend/config/serviceAccountKey.json
+**/serviceAccountKey.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Lock files (keep one, comment out others if needed)
+# Uncomment the ones you're NOT using:
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock

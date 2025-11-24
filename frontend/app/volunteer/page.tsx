@@ -14,10 +14,12 @@ import { Clock, Truck, Star, Heart, Package, Navigation, MapPin, Route } from "l
 import { useState } from "react"
 import { optimizeVolunteerRoute } from "@/utils/api"
 import { toast } from "sonner"
+import Link from "next/link"
 
 export default function VolunteerDashboard() {
   const navItems = [
     { label: "Dashboard", href: "/volunteer" },
+    { label: "Map", href: "/map" },
     { label: "Available Tasks", href: "/volunteer/tasks" },
     { label: "My Deliveries", href: "/volunteer/deliveries" },
     { label: "Profile", href: "/volunteer/profile" },
@@ -239,6 +241,12 @@ export default function VolunteerDashboard() {
           <Card className="p-6">
             <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
             <div className="space-y-3">
+              <Link href="/map" className="block">
+                <Button className="w-full bg-primary hover:bg-primary/90">
+                  <Navigation className="w-4 h-4 mr-2" />
+                  Open Map
+                </Button>
+              </Link>
               <Button 
                 className="w-full bg-primary hover:bg-primary/90"
                 onClick={optimizeRoute}

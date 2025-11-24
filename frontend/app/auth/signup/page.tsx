@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
-import { Mail, Lock, User, Phone, UserPlus, ChefHat, Heart, Users } from 'lucide-react'
+import { Mail, Lock, User, Phone, UserPlus, ChefHat, Heart, Users, Shield } from 'lucide-react'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({

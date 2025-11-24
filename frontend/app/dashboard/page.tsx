@@ -5,19 +5,41 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ChefHat, Heart, Users, Package, TrendingUp, Settings } from 'lucide-react'
+import { ChefHat, Heart, Users, Package, TrendingUp, Settings, Map, Shield } from 'lucide-react'
 import Link from 'next/link'
+import { useRole } from '@/hooks/useRole'
 
 export default function DashboardPage() {
   const { user, userData, loading } = useAuth()
+  const { admin, loading: roleLoading } = useRole()
   const router = useRouter()
 
+  // All hooks must be called before any conditional returns
   useEffect(() => {
     if (!loading && !user) {
       router.push('/auth/login')
     }
   }, [user, loading, router])
 
+  // Redirect based on user type - must be called before early returns
+  useEffect(() => {
+    if (userData && !loading && !roleLoading && user) {
+      // Redirect admin users to admin dashboard
+      if (admin || userData.user_type === 'admin') {
+        router.push('/admin')
+        return
+      }
+      if (userData.user_type === 'donor') {
+        router.push('/donor')
+      } else if (userData.user_type === 'ngo') {
+        router.push('/ngo')
+      } else if (userData.user_type === 'volunteer') {
+        router.push('/volunteer')
+      }
+    }
+  }, [userData, loading, roleLoading, user, router, admin])
+
+  // Early returns after all hooks
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -32,19 +54,6 @@ export default function DashboardPage() {
   if (!user) {
     return null
   }
-
-  // Redirect based on user type
-  useEffect(() => {
-    if (userData && !loading) {
-      if (userData.user_type === 'donor') {
-        router.push('/donor')
-      } else if (userData.user_type === 'ngo') {
-        router.push('/ngo')
-      } else if (userData.user_type === 'volunteer') {
-        router.push('/volunteer')
-      }
-    }
-  }, [userData, loading, router])
 
   const userTypeDashboards = {
     donor: {
@@ -67,10 +76,21 @@ export default function DashboardPage() {
       description: 'Help deliver food to those in need',
       path: '/volunteer',
       color: 'from-orange-500 to-orange-600'
+    },
+    admin: {
+      title: 'Admin Dashboard',
+      icon: Shield,
+      description: 'Manage platform and users',
+      path: '/admin',
+      color: 'from-purple-500 to-purple-600'
     }
   }
 
-  const dashboard = userTypeDashboards[userData?.user_type as keyof typeof userTypeDashboards] || userTypeDashboards.donor
+  // For admin users, show admin dashboard as primary
+  const isAdmin = admin || userData?.user_type === 'admin'
+  const dashboard = isAdmin 
+    ? userTypeDashboards.admin 
+    : (userTypeDashboards[userData?.user_type as keyof typeof userTypeDashboards] || userTypeDashboards.donor)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
@@ -111,7 +131,9 @@ export default function DashboardPage() {
 
           {/* Other Dashboards */}
           {Object.entries(userTypeDashboards).map(([type, config]) => {
-            if (type === userData?.user_type) return null
+            // Skip the current user's dashboard (or admin if user is admin)
+            const currentUserType = isAdmin ? 'admin' : userData?.user_type
+            if (type === currentUserType) return null
             return (
               <Link key={type} href={config.path}>
                 <Card className="cursor-pointer hover:shadow-lg transition-all">
@@ -177,25 +199,46 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Settings */}
-        <Card className="mt-8">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Account Settings</h3>
-                <p className="text-sm text-muted-foreground">
-                  Update your profile and preferences
-                </p>
+        {/* Map & Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          <Card className="cursor-pointer hover:shadow-lg transition-all border-2 border-primary/20 hover:border-primary/40">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Interactive Map</h3>
+                  <p className="text-sm text-muted-foreground">
+                    View donations, NGOs, and volunteers on the map
+                  </p>
+                </div>
+                <Link href="/map">
+                  <Button variant="outline">
+                    <Map className="w-4 h-4 mr-2" />
+                    Open Map
+                  </Button>
+                </Link>
               </div>
-              <Link href="/settings">
-                <Button variant="outline">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Account Settings</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Update your profile and preferences
+                  </p>
+                </div>
+                <Link href="/settings">
+                  <Button variant="outline">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

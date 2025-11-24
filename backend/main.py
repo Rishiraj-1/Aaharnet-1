@@ -17,8 +17,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import route modules (after loading .env)
-from routes import auth_routes, forecast_routes, vision_routes, geo_routes, chatbot_routes, volunteer_routes, emergency_routes
+from routes import auth_routes, forecast_routes, vision_routes, geo_routes, chatbot_routes, volunteer_routes, emergency_routes, donation_routes
 from dependencies import get_current_user
+
+# Auto-seed data on startup (only if collections are empty)
+import logging
+import os
+logger = logging.getLogger(__name__)
+
+def auto_seed_on_startup():
+    """Automatically seed mock data on startup if collections are empty"""
+    try:
+        # Only auto-seed in development or if explicitly enabled
+        auto_seed_enabled = os.getenv("AUTO_SEED_ENABLED", "true").lower() == "true"
+        
+        if auto_seed_enabled:
+            logger.info("Checking if data seeding is needed...")
+            from utils.auto_seed import auto_seed_data
+            auto_seed_data()
+        else:
+            logger.info("Auto-seed is disabled (set AUTO_SEED_ENABLED=false to disable)")
+    except Exception as e:
+        logger.warning(f"Auto-seed on startup failed (non-critical): {str(e)}")
+        # Don't fail startup if seeding fails
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -83,6 +104,13 @@ app.include_router(geo_routes.router, prefix="/api/geo", tags=["Geospatial"])
 app.include_router(chatbot_routes.router, prefix="/api/chatbot", tags=["AI Chatbot"])
 app.include_router(volunteer_routes.router, prefix="/api/volunteer", tags=["Volunteer Management"])
 app.include_router(emergency_routes.router, prefix="/api/emergency", tags=["Emergency Response"])
+app.include_router(donation_routes.router, prefix="/api", tags=["Donations"])
+
+# Auto-seed data on startup (runs after routes are registered)
+@app.on_event("startup")
+async def startup_event():
+    """Run auto-seed on application startup"""
+    auto_seed_on_startup()
 
 # All dependencies are now in dependencies.py
 

@@ -12,7 +12,7 @@ import {
   updateProfile
 } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase'
+import { auth, db, refreshIdToken } from '@/lib/firebase'
 import { loginUser, registerUser, type RegisterData } from '@/utils/api'
 import { toast } from 'sonner'
 
@@ -25,6 +25,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<void>
   updateUserData: (data: any) => Promise<void>
+  refreshToken: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,18 +41,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (firebaseUser) {
         try {
+          // Get custom claims from token (source of truth for role)
+          let tokenRole = null
+          let isAdmin = false
+          try {
+            const idTokenResult = await firebaseUser.getIdTokenResult(true)
+            const claims = idTokenResult.claims || {}
+            tokenRole = (claims.role as string) || null
+            isAdmin = !!(claims.admin as boolean)
+          } catch (tokenError) {
+            console.warn('Could not get token claims:', tokenError)
+          }
+          
           // Fetch user data from Firestore
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
           if (userDoc.exists()) {
-            setUserData(userDoc.data())
+            const firestoreData = userDoc.data()
+            // Sync Firestore with custom claims if they differ
+            if (tokenRole && firestoreData.user_type !== tokenRole) {
+              // Update Firestore to match custom claims
+              await setDoc(doc(db, 'users', firebaseUser.uid), {
+                ...firestoreData,
+                user_type: isAdmin ? 'admin' : tokenRole,
+                updated_at: new Date().toISOString()
+              }, { merge: true })
+              setUserData({
+                ...firestoreData,
+                user_type: isAdmin ? 'admin' : tokenRole
+              })
+            } else {
+              setUserData(firestoreData)
+            }
           } else {
             // Create user document if it doesn't exist
+            const role = isAdmin ? 'admin' : (tokenRole || 'donor')
             const newUserData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               name: firebaseUser.displayName || 'User',
               created_at: new Date().toISOString(),
-              user_type: 'donor',
+              user_type: role,
             }
             await setDoc(doc(db, 'users', firebaseUser.uid), newUserData)
             setUserData(newUserData)
@@ -96,29 +125,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
       
       // Update profile with name
       if (userData.name) {
-        await updateProfile(userCredential.user, { displayName: userData.name })
+        await updateProfile(user, { displayName: userData.name })
       }
+      
+      // Get ID token for backend call
+      const idToken = await user.getIdToken()
+      
+      // Determine role (donor, ngo, volunteer - admin is not allowed in registration)
+      const role = userData.user_type === 'admin' ? 'donor' : (userData.user_type || 'donor')
+      
+      // Call backend to set role as custom claim
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'
+      const setRoleResponse = await fetch(`${backendUrl}/api/auth/set-role`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ role })
+      })
+      
+      if (!setRoleResponse.ok) {
+        const errorBody = await setRoleResponse.json().catch(() => ({}))
+        throw new Error(errorBody?.message || 'Role assignment failed')
+      }
+      
+      // Force token refresh to pick up custom claims
+      await user.getIdToken(true)
       
       // Create user document in Firestore
       const newUserData = {
-        uid: userCredential.user.uid,
+        uid: user.uid,
         email,
         name: userData.name,
-        user_type: userData.user_type || 'donor',
+        user_type: role,
         phone: userData.phone || '',
         created_at: new Date().toISOString(),
         ...userData
       }
       
-      await setDoc(doc(db, 'users', userCredential.user.uid), newUserData)
+      await setDoc(doc(db, 'users', user.uid), newUserData)
       
       // Register with backend (optional, frontend already created user in Firestore)
       try {
         await registerUser({
-          uid: userCredential.user.uid,
+          uid: user.uid,
           email,
           ...userData
         })
@@ -178,6 +233,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshToken = async () => {
+    try {
+      if (!user) {
+        toast.error('No user logged in')
+        return
+      }
+      
+      // Force refresh the token to get updated custom claims
+      const idTokenResult = await user.getIdTokenResult(true)
+      const claims = idTokenResult.claims || {}
+      const tokenRole = (claims.role as string) || null
+      const isAdmin = !!(claims.admin as boolean)
+      
+      // Update Firestore to match custom claims
+      const role = isAdmin ? 'admin' : (tokenRole || 'donor')
+      await setDoc(doc(db, 'users', user.uid), {
+        user_type: role,
+        updated_at: new Date().toISOString()
+      }, { merge: true })
+      
+      // Refresh user data
+      const userDoc = await getDoc(doc(db, 'users', user.uid))
+      if (userDoc.exists()) {
+        setUserData({
+          ...userDoc.data(),
+          user_type: role
+        })
+      }
+      
+      toast.success('Token refreshed! Your permissions have been updated.')
+    } catch (error: any) {
+      console.error('Error refreshing token:', error)
+      toast.error(error.message || 'Failed to refresh token')
+      throw error
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -189,6 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         signInWithGoogle,
         updateUserData,
+        refreshToken,
       }}
     >
       {children}

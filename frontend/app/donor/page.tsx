@@ -11,13 +11,15 @@ import { useAuth } from "@/context/AuthContext"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
 import { useSurplusForecast } from "@/hooks/useForecast"
 import { useShelfLife } from "@/hooks/useShelfLife"
-import { MapPin, TrendingUp, Star, Package, Truck, Heart, Upload, Camera } from "lucide-react"
+import { MapPin, TrendingUp, Star, Package, Truck, Heart, Upload, Camera, Map } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
+import Link from "next/link"
 
 export default function DonorDashboard() {
   const navItems = [
     { label: "My Donations", href: "/donor" },
+    { label: "Map", href: "/map" },
     { label: "Schedule Pickup", href: "/donor/schedule" },
     { label: "Analytics", href: "/donor/analytics" },
     { label: "Settings", href: "/donor/settings" },
@@ -27,26 +29,38 @@ export default function DonorDashboard() {
   const { user, userData, loading: authLoading } = useAuth()
 
   // Fetch real-time donations from Firestore
-  const { data: donations, loading: donationsLoading } = useFirestoreCollection<{
+  // Query without orderBy to avoid composite index requirement
+  // We'll sort client-side instead
+  const { data: allDonations, loading: donationsLoading } = useFirestoreCollection<{
     id: string
-    donor_id: string
-    food_type: string
-    quantity_kg: number
+    donor_id?: string
+    donorId?: string
+    food_type?: string
+    foodType?: string
+    quantity_kg?: number
+    qtyKg?: number
     status: string
-    created_at: string
+    created_at?: string
+    createdAt?: any
   }>('donations', {
-    whereFilter: user?.uid ? {
-      field: 'donor_id',
-      operator: '==',
-      value: user.uid
-    } : undefined,
-    orderByField: 'created_at',
-    orderByDirection: 'desc',
-    limitCount: 10
+    // No where filter - we'll filter client-side to avoid index issues
+    limitCount: 100 // Get more to filter client-side
   })
 
+  // Filter donations by current user (handle both field name formats)
+  const myDonations = (allDonations || []).filter(d => 
+    (d.donor_id === user?.uid || d.donorId === user?.uid)
+  )
+
+  // Sort by date (client-side to avoid index requirement)
+  const sortedDonations = [...myDonations].sort((a, b) => {
+    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.created_at || 0)
+    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.created_at || 0)
+    return dateB.getTime() - dateA.getTime()
+  }).slice(0, 10) // Limit to 10 most recent
+
   // AI forecasting for surplus prediction
-  const forecastRequest = donations && donations.length > 0 ? {
+  const forecastRequest = sortedDonations && sortedDonations.length > 0 ? {
     location: user?.location || 'default',
     category: 'all',
     days_ahead: 7
@@ -55,9 +69,9 @@ export default function DonorDashboard() {
   const { forecast, loading: forecastLoading } = useSurplusForecast(forecastRequest)
 
   // Calculate real stats
-  const totalDonations = donations?.length || 0
-  const totalFoodDonated = donations?.reduce((sum, d) => sum + (d.quantity_kg || 0), 0) || 0
-  const completedDonations = donations?.filter(d => d.status === 'completed').length || 0
+  const totalDonations = sortedDonations.length
+  const totalFoodDonated = sortedDonations.reduce((sum, d) => sum + (d.quantity_kg || d.qtyKg || 0), 0)
+  const completedDonations = sortedDonations.filter(d => d.status === 'completed' || d.status === 'delivered').length
   const impactScore = Math.round(totalFoodDonated * 10)
 
   const stats = [
@@ -87,14 +101,17 @@ export default function DonorDashboard() {
   ]
 
   // Convert to activity feed
-  const activities = donations?.slice(0, 3).map((donation) => ({
-    id: donation.id,
-    type: "donation" as const,
-    title: `Donation ${donation.status}`,
-    description: `${donation.quantity_kg} kg of ${donation.food_type}`,
-    timestamp: new Date(donation.created_at).toLocaleString(),
-    icon: <Package className="w-5 h-5 text-primary" />,
-  })) || []
+  const activities = sortedDonations.slice(0, 3).map((donation) => {
+    const createdAt = donation.createdAt?.toDate ? donation.createdAt.toDate() : new Date(donation.created_at || Date.now())
+    return {
+      id: donation.id,
+      type: "donation" as const,
+      title: `Donation ${donation.status}`,
+      description: `${donation.quantity_kg || donation.qtyKg || 0} kg of ${donation.food_type || donation.foodType || 'food'}`,
+      timestamp: createdAt.toLocaleString(),
+      icon: <Package className="w-5 h-5 text-primary" />,
+    }
+  })
 
   const impactMetrics = [
     { label: "Monthly Donation Goal", current: totalFoodDonated, target: 3000, unit: "kg" },
@@ -179,6 +196,12 @@ export default function DonorDashboard() {
           <Card className="p-6">
             <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
             <div className="space-y-3">
+              <Link href="/map" className="block">
+                <Button className="w-full bg-primary hover:bg-primary/90">
+                  <Map className="w-4 h-4 mr-2" />
+                  Open Map
+                </Button>
+              </Link>
               <Button className="w-full bg-primary hover:bg-primary/90">
                 <Upload className="w-4 h-4 mr-2" />
                 Schedule Pickup

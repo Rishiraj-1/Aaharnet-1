@@ -14,10 +14,12 @@ import { Users, Package, TrendingUp, Heart, Truck, MapPin, AlertCircle, Search }
 import { useState, useEffect } from "react"
 import { findNearbyUsers, forecastDemand } from "@/utils/api"
 import { toast } from "sonner"
+import Link from "next/link"
 
 export default function NGODashboard() {
   const navItems = [
     { label: "Dashboard", href: "/ngo" },
+    { label: "Map", href: "/map" },
     { label: "Requests", href: "/ngo/requests" },
     { label: "Beneficiaries", href: "/ngo/beneficiaries" },
     { label: "Reports", href: "/ngo/reports" },
@@ -236,6 +238,12 @@ export default function NGODashboard() {
           <Card className="p-6">
             <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
             <div className="space-y-3">
+              <Link href="/map" className="block">
+                <Button className="w-full bg-accent hover:bg-accent/90">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Open Map
+                </Button>
+              </Link>
               <Button className="w-full bg-accent hover:bg-accent/90">
                 <Package className="w-4 h-4 mr-2" />
                 Create Request

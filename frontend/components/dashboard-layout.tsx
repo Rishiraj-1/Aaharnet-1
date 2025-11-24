@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Home } from "lucide-react"
+import { Menu, X, Home, Map } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 
 interface DashboardLayoutProps {
@@ -44,7 +44,8 @@ export function DashboardLayout({ title, children, navItems }: DashboardLayoutPr
             </Link>
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button variant="ghost" className="w-full justify-start gap-2">
+                  {item.href === '/map' && <Map className="w-4 h-4" />}
                   {item.label}
                 </Button>
               </Link>

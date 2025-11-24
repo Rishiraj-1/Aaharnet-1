@@ -401,3 +401,25 @@ export async function checkBackendHealth() {
   })
 }
 
+// ==========================================
+// Admin Endpoints
+// ==========================================
+
+export async function listUsers() {
+  return apiClient<{ users: any[]; count: number }>('/api/auth/admin/users')
+}
+
+export async function setAdminRole(uid: string) {
+  return apiClient<{ ok: boolean; message: string; uid: string }>('/api/auth/admin/set-admin', {
+    method: 'POST',
+    body: { uid },
+  })
+}
+
+export async function seedData(force: boolean = false) {
+  return apiClient<{ message: string; seeded: boolean }>('/api/auth/admin/seed-data', {
+    method: 'POST',
+    body: { force },
+  })
+}
+

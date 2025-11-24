@@ -102,6 +102,100 @@ async def generate_heatmap(
             detail=f"Heatmap generation failed: {str(e)}"
         )
 
+@router.get("/heatmap-grid")
+async def get_heatmap_grid(
+    bbox_southwest_lat: float,
+    bbox_southwest_lng: float,
+    bbox_northeast_lat: float,
+    bbox_northeast_lng: float,
+    time_range_hours: int = 24,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Get pre-aggregated heatmap grid data for map visualization
+    """
+    try:
+        from datetime import timedelta
+        from config.firebase_config import firebase_config
+        
+        db = firebase_config.get_firestore_client()
+        
+        # Calculate time cutoff
+        cutoff_time = datetime.now() - timedelta(hours=time_range_hours)
+        
+        # Get donations within bbox and time range
+        donations_query = db.collection('donations')\
+            .where('status', '==', 'available')\
+            .where('createdAt', '>=', cutoff_time)\
+            .stream()
+        
+        # Get requests within bbox and time range
+        requests_query = db.collection('requests')\
+            .where('createdAt', '>=', cutoff_time)\
+            .stream()
+        
+        # Aggregate into grid
+        grid_size = 0.01  # ~1km grid cells
+        grid_data = {}
+        
+        for doc in donations_query:
+            data = doc.to_dict()
+            if 'lat' in data and 'lng' in data:
+                lat, lng = data['lat'], data['lng']
+                if (bbox_southwest_lat <= lat <= bbox_northeast_lat and
+                    bbox_southwest_lng <= lng <= bbox_northeast_lng):
+                    grid_key = (
+                        int(lat / grid_size),
+                        int(lng / grid_size)
+                    )
+                    if grid_key not in grid_data:
+                        grid_data[grid_key] = {'surplus': 0, 'demand': 0}
+                    grid_data[grid_key]['surplus'] += data.get('qtyKg', 0)
+        
+        for doc in requests_query:
+            data = doc.to_dict()
+            if 'lat' in data and 'lng' in data:
+                lat, lng = data['lat'], data['lng']
+                if (bbox_southwest_lat <= lat <= bbox_northeast_lat and
+                    bbox_southwest_lng <= lng <= bbox_northeast_lng):
+                    grid_key = (
+                        int(lat / grid_size),
+                        int(lng / grid_size)
+                    )
+                    if grid_key not in grid_data:
+                        grid_data[grid_key] = {'surplus': 0, 'demand': 0}
+                    grid_data[grid_key]['demand'] += data.get('qtyKg', 0)
+        
+        # Convert to list format
+        heatmap_points = []
+        for (grid_lat, grid_lng), values in grid_data.items():
+            center_lat = grid_lat * grid_size + grid_size / 2
+            center_lng = grid_lng * grid_size + grid_size / 2
+            heatmap_points.append({
+                'lat': center_lat,
+                'lng': center_lng,
+                'surplus': values['surplus'],
+                'demand': values['demand'],
+                'total': values['surplus'] + values['demand']
+            })
+        
+        return {
+            'heatmap_data': heatmap_points,
+            'bbox': {
+                'southwest': {'lat': bbox_southwest_lat, 'lng': bbox_southwest_lng},
+                'northeast': {'lat': bbox_northeast_lat, 'lng': bbox_northeast_lng}
+            },
+            'time_range_hours': time_range_hours,
+            'total_points': len(heatmap_points)
+        }
+        
+    except Exception as e:
+        logger.error(f"Heatmap grid generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Heatmap grid generation failed: {str(e)}"
+        )
+
 @router.post("/nearby", response_model=Dict[str, Any])
 async def find_nearby_users(
     request: LocationRequest,

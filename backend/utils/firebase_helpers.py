@@ -128,24 +128,62 @@ class FirebaseHelper:
             return False
     
     @staticmethod
+    def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """
+        Calculate the great circle distance between two points on Earth using Haversine formula
+        Returns distance in kilometers
+        """
+        import math
+        
+        # Radius of Earth in kilometers
+        R = 6371.0
+        
+        # Convert latitude and longitude from degrees to radians
+        lat1_rad = math.radians(lat1)
+        lon1_rad = math.radians(lon1)
+        lat2_rad = math.radians(lat2)
+        lon2_rad = math.radians(lon2)
+        
+        # Haversine formula
+        dlat = lat2_rad - lat1_rad
+        dlon = lon2_rad - lon1_rad
+        
+        a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        
+        distance = R * c
+        return distance
+    
+    @staticmethod
     def get_nearby_users(latitude: float, longitude: float, radius_km: float = 10.0) -> List[Dict[str, Any]]:
-        """Get users within a certain radius (simplified implementation)"""
+        """Get users within a certain radius using accurate Haversine formula"""
         try:
-            # This is a simplified implementation
-            # In production, you'd use GeoFirestore or similar
             docs = firebase_config.get_firestore_client().collection('users').stream()
             nearby_users = []
             
             for doc in docs:
                 user_data = doc.to_dict()
-                if 'location' in user_data:
+                if 'location' in user_data and user_data['location']:
                     user_lat = user_data['location'].get('lat', 0)
                     user_lng = user_data['location'].get('lng', 0)
                     
-                    # Simple distance calculation (not accurate for large distances)
-                    distance = ((user_lat - latitude) ** 2 + (user_lng - longitude) ** 2) ** 0.5
-                    if distance <= radius_km / 111:  # Rough conversion to degrees
-                        nearby_users.append(user_data)
+                    # Skip if invalid coordinates
+                    if user_lat == 0 and user_lng == 0:
+                        continue
+                    
+                    # Calculate accurate distance using Haversine formula
+                    distance = FirebaseHelper.haversine_distance(
+                        latitude, longitude, user_lat, user_lng
+                    )
+                    
+                    if distance <= radius_km:
+                        # Add distance to user data
+                        user_data_with_distance = user_data.copy()
+                        user_data_with_distance['distance_km'] = round(distance, 2)
+                        nearby_users.append(user_data_with_distance)
+            
+            # Sort by distance
+            nearby_users.sort(key=lambda x: x.get('distance_km', float('inf')))
             
             return nearby_users
         except Exception as e:

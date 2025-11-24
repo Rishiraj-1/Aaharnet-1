@@ -44,6 +44,31 @@ export function isAuthenticated(): boolean {
   return auth.currentUser !== null
 }
 
+// Helper function to get ID token result with custom claims
+export async function getIdTokenResultWithClaims() {
+  const user = auth.currentUser
+  if (!user) return null
+  
+  const idTokenResult = await user.getIdTokenResult(true)
+  // custom claims are in idTokenResult.claims
+  return idTokenResult.claims
+}
+
+// Helper function to force refresh the ID token (useful after custom claims are updated)
+export async function refreshIdToken(): Promise<boolean> {
+  const user = auth.currentUser
+  if (!user) return false
+  
+  try {
+    // Force refresh the token to get updated custom claims
+    await user.getIdToken(true)
+    return true
+  } catch (error) {
+    console.error('Error refreshing token:', error)
+    return false
+  }
+}
+
 // Export app instance
 export default app
 

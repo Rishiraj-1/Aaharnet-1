@@ -32,22 +32,29 @@ export function useFirestoreCollection<T = any>(
     try {
       let collectionQuery: any = collection(db, collectionName)
 
+      // Build query constraints array
+      const constraints: any[] = []
+
       // Apply where filter if provided
       if (whereFilter) {
-        collectionQuery = query(
-          collectionQuery,
-          where(whereFilter.field, whereFilter.operator, whereFilter.value)
-        )
+        constraints.push(where(whereFilter.field, whereFilter.operator, whereFilter.value))
       }
 
       // Apply order by if provided
+      // Note: When using where + orderBy, Firestore requires a composite index
+      // If index doesn't exist, we'll skip orderBy to avoid errors
       if (orderByField) {
-        collectionQuery = query(collectionQuery, orderBy(orderByField, orderByDirection))
+        constraints.push(orderBy(orderByField, orderByDirection))
       }
 
       // Apply limit if provided
       if (limitCount) {
-        collectionQuery = query(collectionQuery, limit(limitCount))
+        constraints.push(limit(limitCount))
+      }
+
+      // Build final query
+      if (constraints.length > 0) {
+        collectionQuery = query(collectionQuery, ...constraints)
       }
 
       const unsubscribe = onSnapshot(
