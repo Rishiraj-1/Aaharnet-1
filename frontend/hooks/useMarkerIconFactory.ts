@@ -58,50 +58,44 @@ export function useMarkerIconFactory() {
       }
       const multiplier = sizeMultipliers[size]
 
-      // Use different icons for different roles
-      let iconUrl: string
-      let iconSize: [number, number]
+      // Use different icons for different roles - all use distinct SVG icons
+      const color = COLORS[role] || COLORS.pending
+      const statusColor = status && COLORS[status as keyof typeof COLORS] 
+        ? COLORS[status as keyof typeof COLORS] 
+        : null
+      
+      const finalColor = statusColor || color
+      
+      // Different shapes for different roles
+      let shapePath = ''
+      let innerShape = ''
       
       if (role === 'donor' || role === 'donor-own') {
-        // Use provided default marker image for donors
-        iconUrl = DEFAULT_MARKER_URL
-        iconSize = [40 * multiplier, 40 * multiplier]
+        // Package/box shape for donors (orange)
+        shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
+        innerShape = '<rect x="8" y="10" width="16" height="12" rx="2" fill="#fff"/><path d="M8 10 L16 6 L24 10" stroke="#fff" stroke-width="1.5" fill="none"/>'
+      } else if (role === 'ngo') {
+        // Heart shape for NGO (teal)
+        shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
+        innerShape = '<path d="M16 12c-2-2-6-2-6 4 0 4 6 8 6 8s6-4 6-8c0-6-4-6-6-4z" fill="#fff"/>'
+      } else if (role === 'volunteer') {
+        // Person/user shape for volunteer (blue)
+        shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
+        innerShape = '<circle cx="16" cy="12" r="5" fill="#fff"/><path d="M8 24c0-4 3.5-7 8-7s8 3 8 7" fill="#fff"/>'
       } else {
-        // Use colored SVG for other roles with role-specific shapes
-        const color = COLORS[role] || COLORS.pending
-        const statusColor = status && COLORS[status as keyof typeof COLORS] 
-          ? COLORS[status as keyof typeof COLORS] 
-          : null
-        
-        const finalColor = statusColor || color
-        
-        // Different shapes for different roles
-        let shapePath = ''
-        let innerShape = ''
-        
-        if (role === 'ngo') {
-          // Heart shape for NGO
-          shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
-          innerShape = '<path d="M16 12c-2-2-6-2-6 4 0 4 6 8 6 8s6-4 6-8c0-6-4-6-6-4z" fill="#fff"/>'
-        } else if (role === 'volunteer') {
-          // Person/user shape for volunteer
-          shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
-          innerShape = '<circle cx="16" cy="12" r="5" fill="#fff"/><path d="M8 24c0-4 3.5-7 8-7s8 3 8 7" fill="#fff"/>'
-        } else {
-          // Default circle for other roles
-          shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
-          innerShape = '<circle cx="16" cy="16" r="8" fill="#fff"/>'
-        }
-        
-        const svgIcon = `
-          <svg width="${32 * multiplier}" height="${40 * multiplier}" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-            <path d="${shapePath}" fill="${finalColor}" stroke="#fff" stroke-width="2"/>
-            ${innerShape}
-          </svg>
-        `
-        iconUrl = `data:image/svg+xml;base64,${btoa(svgIcon)}`
-        iconSize = [32 * multiplier, 40 * multiplier]
+        // Default circle for other roles
+        shapePath = 'M16 0C7.163 0 0 7.163 0 16c0 11.5 16 24 16 24s16-12.5 16-24C32 7.163 24.837 0 16 0z'
+        innerShape = '<circle cx="16" cy="16" r="8" fill="#fff"/>'
       }
+      
+      const svgIcon = `
+        <svg width="${32 * multiplier}" height="${40 * multiplier}" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+          <path d="${shapePath}" fill="${finalColor}" stroke="#fff" stroke-width="2"/>
+          ${innerShape}
+        </svg>
+      `
+      const iconUrl = `data:image/svg+xml;base64,${btoa(svgIcon)}`
+      const iconSize: [number, number] = [32 * multiplier, 40 * multiplier]
 
       // Create icon
       const icon = L.icon({

@@ -50,23 +50,54 @@ export function RolePanelDonor({ donations, userId, onAction }: RolePanelDonorPr
   const availableCount = myDonations.filter(d => d.status === 'available').length
 
   const handleGetLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData({
-            ...formData,
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          })
-          toast.success('Location captured!')
-        },
-        (error) => {
-          toast.error('Failed to get location')
-        }
-      )
-    } else {
-      toast.error('Geolocation not supported')
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
     }
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 60000
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        const accuracy = position.coords.accuracy || 0
+        
+        setFormData({
+          ...formData,
+          lat: latitude,
+          lng: longitude
+        })
+        
+        if (accuracy > 1000) {
+          toast.warning(`Location captured (low accuracy: ${Math.round(accuracy)}m). Please enable GPS for better results.`)
+        } else {
+          toast.success(`Location captured! (Accuracy: ${Math.round(accuracy)}m)`)
+        }
+      },
+      (error) => {
+        console.error('Location error:', error)
+        let errorMessage = 'Failed to get location'
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please enable location permissions.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location unavailable. Please check your GPS settings.'
+            break
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Please ensure GPS is enabled.'
+            break
+        }
+        
+        toast.error(errorMessage)
+      },
+      options
+    )
   }
 
   const handleCreateDonation = async () => {

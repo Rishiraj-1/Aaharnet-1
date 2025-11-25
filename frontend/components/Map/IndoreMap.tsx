@@ -37,12 +37,13 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { seedData } from '@/utils/api'
 
-// Map center: Indore, India
+// Map center: Indore, India (city center)
 const MAP_CENTER: [number, number] = [22.7196, 75.8577]
-const MAP_ZOOM = 12
+const MAP_ZOOM = 13
+// Indore city bounds (narrower than district)
 const CITY_BBOX = {
-  southwest: { lat: 22.5800, lng: 75.6500 },
-  northeast: { lat: 22.9000, lng: 76.0700 }
+  southwest: { lat: 22.6500, lng: 75.7500 },
+  northeast: { lat: 22.8000, lng: 75.9500 }
 }
 
 // Fix for default Leaflet marker icons
@@ -327,22 +328,28 @@ export function IndoreMap() {
   const handleCenterOnMe = useCallback(() => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser')
-      setUserLocation(MAP_CENTER)
       return
     }
 
     // Request location with timeout and better error handling
     const options = {
       enableHighAccuracy: true,
-      timeout: 10000, // 10 seconds
-      maximumAge: 0 // Don't use cached position
+      timeout: 15000, // 15 seconds (increased timeout)
+      maximumAge: 60000 // Allow 1 minute old cached position if available
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords
+        const accuracy = position.coords.accuracy || 0
+        
+        // Validate location accuracy
+        if (accuracy > 1000) {
+          toast.warning(`Location accuracy is low (${Math.round(accuracy)}m). Please ensure GPS is enabled.`)
+        }
+        
         setUserLocation([latitude, longitude])
-        toast.success('Location found!')
+        toast.success(`Location found! (Accuracy: ${Math.round(accuracy)}m)`)
       },
       (error) => {
         console.error('Error getting location:', error)
@@ -350,22 +357,21 @@ export function IndoreMap() {
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location permissions in your browser settings.'
+            errorMessage = 'Location access denied. Please enable location permissions in your browser settings and reload the page.'
             break
           case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable. Using map center instead.'
+            errorMessage = 'Location information unavailable. Please check your device GPS settings.'
             break
           case error.TIMEOUT:
-            errorMessage = 'Location request timed out. Using map center instead.'
+            errorMessage = 'Location request timed out. Please ensure GPS is enabled and try again.'
             break
           default:
-            errorMessage = 'An unknown error occurred. Using map center instead.'
+            errorMessage = 'An unknown error occurred while getting your location.'
             break
         }
         
         toast.error(errorMessage)
-        // Fallback to map center (Indore)
-        setUserLocation(MAP_CENTER)
+        // Don't fallback to Indore - let user know they need to enable location
       },
       options
     )

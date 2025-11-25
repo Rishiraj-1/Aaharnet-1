@@ -1,6 +1,6 @@
 """
 Seed Map Data for Indore, India
-Creates ~25 donors, ~15 NGOs, and ~10 volunteers spread across Indore bbox
+Creates ~8 donors, ~5 NGOs, and ~4 volunteers spread across Indore city bbox
 """
 
 import sys
@@ -23,10 +23,10 @@ from config.firebase_config import firebase_config
 import random
 import uuid
 
-# Indore bounding box
+# Indore city bounding box (narrower - city only, not district)
 INDURE_BBOX = {
-    "southwest": {"lat": 22.5800, "lng": 75.6500},
-    "northeast": {"lat": 22.9000, "lng": 76.0700}
+    "southwest": {"lat": 22.6500, "lng": 75.7500},
+    "northeast": {"lat": 22.8000, "lng": 75.9500}
 }
 
 # Indore center
@@ -42,18 +42,14 @@ def generate_random_location_in_indore() -> Dict[str, float]:
     return {"lat": lat, "lng": lng}
 
 def seed_map_donors() -> List[Dict[str, Any]]:
-    """Generate ~25 donors in Indore"""
+    """Generate ~8 donors in Indore"""
     donors = []
     names = [
         "Indore Fresh Mart", "City Bakery", "Green Valley Restaurant", "Royal Kitchen",
-        "Annapurna Food Services", "Tasty Bites", "Food Express", "Delicious Corner",
-        "Spice Garden", "Sweet Home", "Golden Spoon", "Food Paradise", "City Delight",
-        "Royal Feast", "Taj Restaurant", "Maharaja Kitchen", "Spice Route", "Food Court",
-        "Delhi Darbar", "Punjabi Dhaba", "South Indian Corner", "Chinese Express",
-        "Italian Kitchen", "Fast Food Junction", "Healthy Bites"
+        "Annapurna Food Services", "Tasty Bites", "Food Express", "Delicious Corner"
     ]
     
-    for i in range(25):
+    for i in range(8):
         location = generate_random_location_in_indore()
         donors.append({
             "uid": f"donor_indore_{i+1:03d}",
@@ -68,16 +64,14 @@ def seed_map_donors() -> List[Dict[str, Any]]:
     return donors
 
 def seed_map_ngos() -> List[Dict[str, Any]]:
-    """Generate ~15 NGOs in Indore"""
+    """Generate ~5 NGOs in Indore"""
     ngos = []
     names = [
         "Indore Food Bank", "Community Kitchen", "Hope Foundation", "Feed the Hungry",
-        "Food for All", "Annapurna Seva", "Hunger Relief", "Share & Care",
-        "Food Distribution Center", "Community Support", "Helping Hands", "Food Aid",
-        "Relief Organization", "Support Foundation", "Care & Share"
+        "Food for All"
     ]
     
-    for i in range(15):
+    for i in range(5):
         location = generate_random_location_in_indore()
         ngos.append({
             "uid": f"ngo_indore_{i+1:03d}",
@@ -96,14 +90,13 @@ def seed_map_ngos() -> List[Dict[str, Any]]:
     return ngos
 
 def seed_map_volunteers() -> List[Dict[str, Any]]:
-    """Generate ~10 volunteers in Indore"""
+    """Generate ~4 volunteers in Indore"""
     volunteers = []
     names = [
-        "Rajesh Kumar", "Priya Sharma", "Amit Patel", "Sneha Singh", "Vikram Mehta",
-        "Anjali Gupta", "Rohit Verma", "Kavita Joshi", "Suresh Yadav", "Meera Reddy"
+        "Rajesh Kumar", "Priya Sharma", "Amit Patel", "Sneha Singh"
     ]
     
-    for i in range(10):
+    for i in range(4):
         location = generate_random_location_in_indore()
         volunteers.append({
             "uid": f"volunteer_indore_{i+1:03d}",
@@ -124,8 +117,8 @@ def seed_map_donations(donors: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Generate donations from donors"""
     donations = []
     
-    for donor in donors[:20]:  # Use first 20 donors
-        num_donations = random.randint(1, 3)
+    for donor in donors[:6]:  # Use first 6 donors
+        num_donations = random.randint(1, 2)  # 1-2 donations per donor
         for j in range(num_donations):
             location = generate_random_location_in_indore()
             created_at = datetime.now() - timedelta(hours=random.randint(1, 72))
@@ -147,8 +140,8 @@ def seed_map_donations(donors: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             # Add ngoId and volunteerId if status is assigned/picked/delivered
             if donation["status"] in ["assigned", "picked", "delivered"]:
                 # Randomly assign NGO and volunteer (mock)
-                donation["ngoId"] = f"ngo_indore_{random.randint(1, 15):03d}"
-                donation["volunteerId"] = f"volunteer_indore_{random.randint(1, 10):03d}"
+                donation["ngoId"] = f"ngo_indore_{random.randint(1, 5):03d}"
+                donation["volunteerId"] = f"volunteer_indore_{random.randint(1, 4):03d}"
             
             donations.append(donation)
     
@@ -158,7 +151,7 @@ def seed_map_requests(ngos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Generate requests from NGOs"""
     requests = []
     
-    for ngo in ngos[:10]:  # Use first 10 NGOs
+    for ngo in ngos[:4]:  # Use first 4 NGOs
         num_requests = random.randint(1, 2)
         for j in range(num_requests):
             location = generate_random_location_in_indore()
