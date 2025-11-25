@@ -226,12 +226,17 @@ function MapControls({
   )
 }
 
-function CenterOnLocation({ lat, lng }: { lat: number; lng: number }) {
+function CenterOnLocation({ lat, lng, autoCenter = false }: { lat: number; lng: number; autoCenter?: boolean }) {
   const map = useMap()
+  const hasCenteredRef = React.useRef(false)
   
   useEffect(() => {
-    map.setView([lat, lng], map.getZoom())
-  }, [lat, lng, map])
+    // Only auto-center on first location or if explicitly requested
+    if (autoCenter || !hasCenteredRef.current) {
+      map.setView([lat, lng], map.getZoom())
+      hasCenteredRef.current = true
+    }
+  }, [lat, lng, map, autoCenter])
   
   return null
 }
@@ -325,24 +330,30 @@ export function IndoreMap() {
     return filtered
   }, [donations, userRole, userId, filters])
 
-  // Get user's current location
+  // Get user's current location - always fetch fresh location
   const handleCenterOnMe = useCallback(() => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser')
       return
     }
 
+    console.log('[IndoreMap] Manual location request triggered')
+
     // Request location with timeout and better error handling
+    // maximumAge: 0 forces a fresh location (no cached position)
     const options = {
       enableHighAccuracy: true,
-      timeout: 15000, // 15 seconds (increased timeout)
-      maximumAge: 60000 // Allow 1 minute old cached position if available
+      timeout: 20000, // 20 seconds
+      maximumAge: 0 // Force fresh location - absolutely no cached positions
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords
         const accuracy = position.coords.accuracy || 0
+        const timestamp = new Date(position.timestamp).toLocaleString()
+        
+        console.log(`[IndoreMap] Manual location received: ${latitude}, ${longitude} (Accuracy: ${Math.round(accuracy)}m, Time: ${timestamp})`)
         
         // Validate location accuracy
         if (accuracy > 1000) {
@@ -350,10 +361,10 @@ export function IndoreMap() {
         }
         
         setUserLocation([latitude, longitude])
-        toast.success(`Location found! (Accuracy: ${Math.round(accuracy)}m)`)
+        toast.success(`Location found! (Accuracy: ${Math.round(accuracy)}m, Time: ${timestamp})`)
       },
       (error) => {
-        console.error('Error getting location:', error)
+        console.error('[IndoreMap] Error getting location:', error)
         let errorMessage = 'Unable to get your location'
         
         switch (error.code) {
@@ -377,6 +388,114 @@ export function IndoreMap() {
       options
     )
   }, [])
+
+  // Track if we should auto-center (only on first location or manual center)
+  const [shouldAutoCenter, setShouldAutoCenter] = useState(false)
+  const hasReceivedFirstLocation = React.useRef(false)
+
+  // Real-time location tracking using watchPosition
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.warn('[IndoreMap] Geolocation not supported')
+      return
+    }
+
+    console.log('[IndoreMap] Starting real-time location tracking...')
+
+    // First, clear any existing watch
+    // Then get a fresh location immediately
+    const getFreshLocation = () => {
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 20000, // 20 seconds
+        maximumAge: 0 // Force fresh location - absolutely no cache
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords
+          const accuracy = position.coords.accuracy || 0
+          const timestamp = new Date(position.timestamp).toLocaleString()
+          
+          console.log(`[IndoreMap] Fresh location received: ${latitude}, ${longitude} (Accuracy: ${Math.round(accuracy)}m, Time: ${timestamp})`)
+          
+          setUserLocation([latitude, longitude])
+          
+          if (!hasReceivedFirstLocation.current) {
+            hasReceivedFirstLocation.current = true
+            setShouldAutoCenter(true)
+            toast.success(`Real-time location tracking started (Accuracy: ${Math.round(accuracy)}m)`, { duration: 3000 })
+          }
+        },
+        (error) => {
+          console.error('[IndoreMap] Error getting fresh location:', error)
+          toast.error(`Location error: ${error.message}`)
+        },
+        options
+      )
+    }
+
+    // Get fresh location immediately
+    getFreshLocation()
+
+    // Then start watching for continuous updates
+    const watchOptions = {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0 // Always get fresh location - no cached positions
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        const accuracy = position.coords.accuracy || 0
+        const timestamp = new Date(position.timestamp).toLocaleString()
+        
+        console.log(`[IndoreMap] Location update: ${latitude}, ${longitude} (Accuracy: ${Math.round(accuracy)}m, Time: ${timestamp})`)
+        
+        // Update location in real-time (but don't auto-center unless first time)
+        setUserLocation([latitude, longitude])
+        
+        // Only show toast on first location
+        if (!hasReceivedFirstLocation.current) {
+          hasReceivedFirstLocation.current = true
+          setShouldAutoCenter(true) // Auto-center on first location
+          toast.success(`Real-time location tracking started (Accuracy: ${Math.round(accuracy)}m)`, { duration: 3000 })
+        }
+      },
+      (error) => {
+        console.error('[IndoreMap] Error watching location:', error)
+        let errorMsg = 'Location tracking error'
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = 'Location permission denied. Please enable location access.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = 'Location unavailable. Check GPS settings.'
+            break
+          case error.TIMEOUT:
+            errorMsg = 'Location request timed out. Ensure GPS is enabled.'
+            break
+        }
+        toast.error(errorMsg)
+      },
+      watchOptions
+    )
+
+    // Cleanup: stop watching when component unmounts
+    return () => {
+      console.log('[IndoreMap] Stopping location tracking')
+      navigator.geolocation.clearWatch(watchId)
+    }
+  }, []) // Empty deps - only run once on mount
+
+  // Update shouldAutoCenter when user manually centers
+  const handleCenterOnMeWithAutoCenter = useCallback(() => {
+    setShouldAutoCenter(true)
+    handleCenterOnMe()
+    // Reset after a short delay so subsequent watchPosition updates don't auto-center
+    setTimeout(() => setShouldAutoCenter(false), 1000)
+  }, [handleCenterOnMe])
 
   const handleRoleAction = useCallback(() => {
     // This will be handled by role panels
@@ -450,7 +569,7 @@ export function IndoreMap() {
         onTimeSliderChange={setTimeRangeHours}
         timeRangeHours={timeRangeHours}
         onFilterClick={() => setShowFilters(!showFilters)}
-        onCenterOnMe={handleCenterOnMe}
+          onCenterOnMe={handleCenterOnMeWithAutoCenter}
         userRole={userRole}
         onRoleAction={handleRoleAction}
         isAdmin={admin}

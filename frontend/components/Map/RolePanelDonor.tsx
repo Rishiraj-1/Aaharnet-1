@@ -88,7 +88,7 @@ export function RolePanelDonor({ donations, userId, onAction, onLocationCaptured
     const options = {
       enableHighAccuracy: true,
       timeout: 15000,
-      maximumAge: 60000
+      maximumAge: 0 // Force fresh location - no cached positions
     }
 
     navigator.geolocation.getCurrentPosition(

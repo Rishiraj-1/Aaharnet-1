@@ -9,14 +9,32 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from contextlib import asynccontextmanager
 import uvicorn
 import os
 import signal
 import sys
 from dotenv import load_dotenv
+import warnings
+import logging
+import sys
+from io import StringIO
+
+# Suppress dotenv parsing warnings (non-critical - problematic lines are just skipped)
+warnings.filterwarnings('ignore', message='.*Python-dotenv could not parse.*')
+
+# Suppress dotenv logger warnings
+dotenv_logger = logging.getLogger('dotenv.main')
+dotenv_logger.setLevel(logging.ERROR)  # Only show errors, not warnings
 
 # Load environment variables FIRST (before importing routes that use Firebase)
-load_dotenv()
+# Temporarily suppress stderr to hide dotenv parsing warnings
+old_stderr = sys.stderr
+sys.stderr = StringIO()
+try:
+    load_dotenv(verbose=False)
+finally:
+    sys.stderr = old_stderr
 
 # Import route modules (after loading .env)
 from routes import auth_routes, forecast_routes, vision_routes, geo_routes, chatbot_routes, volunteer_routes, emergency_routes, donation_routes
@@ -25,6 +43,7 @@ from dependencies import get_current_user
 # Auto-seed data on startup (only if collections are empty)
 import logging
 import os
+
 logger = logging.getLogger(__name__)
 
 def auto_seed_on_startup():
@@ -46,13 +65,33 @@ def auto_seed_on_startup():
         logger.warning(f"Auto-seed on startup failed (non-critical): {str(e)}")
         # Don't fail startup if seeding fails
 
-# Initialize FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown"""
+    # Startup
+    logger.info("Application startup...")
+    auto_seed_on_startup()
+    logger.info("Application startup complete.")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down server gracefully...")
+    try:
+        # Close any open connections or cleanup resources
+        # Firebase client doesn't need explicit cleanup
+        logger.info("Server shutdown complete")
+    except Exception as e:
+        logger.warning(f"Error during shutdown cleanup: {str(e)}")
+
+# Initialize FastAPI app with lifespan handler
 app = FastAPI(
     title="AAHARNET.AI API",
     description="AI-Powered Food Redistribution Platform Backend",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Rate limiting
@@ -110,23 +149,6 @@ app.include_router(chatbot_routes.router, prefix="/api/chatbot", tags=["AI Chatb
 app.include_router(volunteer_routes.router, prefix="/api/volunteer", tags=["Volunteer Management"])
 app.include_router(emergency_routes.router, prefix="/api/emergency", tags=["Emergency Response"])
 app.include_router(donation_routes.router, prefix="/api", tags=["Donations"])
-
-# Auto-seed data on startup (runs after routes are registered)
-@app.on_event("startup")
-async def startup_event():
-    """Run auto-seed on application startup"""
-    auto_seed_on_startup()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on application shutdown"""
-    logger.info("Shutting down server gracefully...")
-    try:
-        # Close any open connections or cleanup resources
-        # Firebase client doesn't need explicit cleanup
-        logger.info("Server shutdown complete")
-    except Exception as e:
-        logger.warning(f"Error during shutdown cleanup: {str(e)}")
 
 # All dependencies are now in dependencies.py
 

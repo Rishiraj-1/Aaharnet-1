@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/AuthContext"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
-import { Package, MapPin, Clock, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, Truck } from "lucide-react"
+import { Package, MapPin, Clock, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, Truck, Route, ArrowRight, Zap, Navigation, Target } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { AnimatedMetricCard } from "@/components/ui/animated-metric-card"
 
-// Mock data
 const mockTasks = [
   {
     id: "1",
@@ -62,7 +63,6 @@ export default function VolunteerTasksPage() {
   const { user, loading: authLoading } = useAuth()
   const [useMockData, setUseMockData] = useState(true)
 
-  // Real data from Firestore
   const { data: realTasks, loading: tasksLoading } = useFirestoreCollection<{
     id: string
     donationId: string
@@ -83,7 +83,6 @@ export default function VolunteerTasksPage() {
     limitCount: 50
   })
 
-  // Filter tasks - available tasks or tasks assigned to this volunteer
   const filteredRealTasks = realTasks?.filter(task => 
     task.status === 'available' || task.volunteerId === user?.uid
   ) || []
@@ -94,7 +93,7 @@ export default function VolunteerTasksPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'available':
-        return 'bg-green-500'
+        return 'bg-emerald-500'
       case 'assigned':
       case 'in_progress':
         return 'bg-blue-500'
@@ -116,20 +115,18 @@ export default function VolunteerTasksPage() {
 
   return (
     <DashboardLayout title="Available Tasks" navItems={navItems}>
-      <div className="space-y-6">
-        {/* Toggle */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Data Source</h3>
-              <p className="text-sm text-muted-foreground">
-                {useMockData ? "Showing mock data for demonstration" : "Showing real data from database"}
-              </p>
-            </div>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Available Tasks</h1>
+            <p className="text-muted-foreground mt-1">Find and accept delivery tasks</p>
+          </div>
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={() => setUseMockData(!useMockData)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 shadow-sm"
             >
               {useMockData ? (
                 <>
@@ -143,53 +140,61 @@ export default function VolunteerTasksPage() {
                 </>
               )}
             </Button>
+            <Link href="/map">
+              <Button className="shadow-lg bg-gradient-to-r from-blue-500 to-blue-600">
+                <Navigation className="h-4 w-4 mr-2" />
+                View on Map
+              </Button>
+            </Link>
           </div>
-        </Card>
+        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Tasks</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Package className="h-8 w-8 text-primary" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Available</p>
-                <p className="text-2xl font-bold">{stats.available}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Assigned</p>
-                <p className="text-2xl font-bold">{stats.assigned}</p>
-              </div>
-              <Truck className="h-8 w-8 text-blue-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold">{stats.completed}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-gray-500" />
-            </div>
-          </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <AnimatedMetricCard
+            title="Total Tasks"
+            value={stats.total}
+            icon={Package}
+            gradient="from-blue-500 to-cyan-500"
+            bgGradient="from-blue-500/10 to-cyan-500/10"
+          />
+          <AnimatedMetricCard
+            title="Available"
+            value={stats.available}
+            icon={Target}
+            gradient="from-emerald-500 to-teal-500"
+            bgGradient="from-emerald-500/10 to-teal-500/10"
+          />
+          <AnimatedMetricCard
+            title="Assigned"
+            value={stats.assigned}
+            icon={Truck}
+            gradient="from-amber-500 to-orange-500"
+            bgGradient="from-amber-500/10 to-orange-500/10"
+          />
+          <AnimatedMetricCard
+            title="Completed"
+            value={stats.completed}
+            icon={CheckCircle}
+            gradient="from-rose-500 to-pink-500"
+            bgGradient="from-rose-500/10 to-pink-500/10"
+          />
         </div>
 
         {/* Tasks List */}
-        <Card>
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-6">Delivery Tasks</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Package className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Delivery Tasks</h2>
+                  <p className="text-sm text-muted-foreground">{tasks.length} total tasks</p>
+                </div>
+              </div>
+            </div>
 
             {loading ? (
               <div className="text-center py-12">
@@ -198,78 +203,130 @@ export default function VolunteerTasksPage() {
               </div>
             ) : tasks.length === 0 ? (
               <div className="text-center py-12">
-                <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <div className="relative inline-flex items-center justify-center mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-500/10 rounded-full blur-xl"></div>
+                  <Package className="h-16 w-16 text-blue-500 relative z-10" />
+                </div>
                 <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
                 <p className="text-muted-foreground mb-4">
                   {useMockData 
                     ? "Mock data is empty. Switch to real data."
                     : "No delivery tasks available at the moment."}
                 </p>
+                <Link href="/map">
+                  <Button className="bg-gradient-to-r from-blue-500 to-blue-600">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    View Map
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-4">
                 {tasks.map((task) => (
-                  <Card key={task.id} className="p-4">
+                  <Card 
+                    key={task.id} 
+                    className={cn(
+                      "p-5 border-0 shadow-md hover:shadow-lg transition-all duration-300",
+                      "bg-gradient-to-br from-card to-muted/30",
+                      task.status === 'available' && "border-2 border-emerald-500/20 hover:border-emerald-500/40",
+                      task.status === 'completed' && "opacity-75"
+                    )}
+                  >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(task.status)}>
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge className={cn(getStatusColor(task.status), "text-white shadow-sm")}>
                             {task.status}
                           </Badge>
                           {task.priority && (
-                            <Badge variant="outline">
+                            <Badge variant="outline" className="border-primary/20">
                               {task.priority} priority
                             </Badge>
                           )}
+                          {task.status === 'available' && (
+                            <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Quick Accept
+                            </Badge>
+                          )}
                         </div>
+                        
                         <div>
-                          <h3 className="font-semibold text-lg">
+                          <h3 className="font-semibold text-xl mb-2 flex items-center gap-2">
+                            <Package className="h-5 w-5 text-blue-500" />
                             {(task.quantity || task.quantity_kg || 0)} kg - {task.foodType || task.food_type}
                           </h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">Pickup: {task.pickupLocation}</p>
-                              <p className="text-muted-foreground">Delivery: {task.deliveryLocation}</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="p-2 rounded-lg bg-blue-500/10">
+                              <MapPin className="h-4 w-4 text-blue-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground">Pickup</p>
+                              <p className="font-semibold truncate">{task.pickupLocation}</p>
                             </div>
                           </div>
-                          <div className="space-y-1">
-                            {task.distance && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Distance: </span>
-                                <span className="font-medium">{task.distance} km</span>
-                              </div>
-                            )}
-                            {task.estimatedTime && (
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Est. Time: </span>
-                                <span className="font-medium">{task.estimatedTime} min</span>
-                              </div>
-                            )}
+                          
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="p-2 rounded-lg bg-emerald-500/10">
+                              <Target className="h-4 w-4 text-emerald-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground">Delivery</p>
+                              <p className="font-semibold truncate">{task.deliveryLocation}</p>
+                            </div>
                           </div>
+                          
+                          {task.distance && (
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                              <div className="p-2 rounded-lg bg-amber-500/10">
+                                <Route className="h-4 w-4 text-amber-500" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Distance</p>
+                                <p className="font-semibold">{task.distance} km</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {task.estimatedTime && (
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                              <div className="p-2 rounded-lg bg-purple-500/10">
+                                <Clock className="h-4 w-4 text-purple-500" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Est. Time</p>
+                                <p className="font-semibold">{task.estimatedTime} min</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      
+                      <div className="flex flex-col gap-2 ml-4">
                         {task.status === 'available' && (
-                          <Button size="sm">
+                          <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-sm">
+                            <CheckCircle className="h-4 w-4 mr-2" />
                             Accept Task
                           </Button>
                         )}
                         {(task.status === 'assigned' || task.status === 'in_progress') && (
                           <>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="shadow-sm">
+                              <Navigation className="h-4 w-4 mr-2" />
                               View Route
                             </Button>
-                            <Button size="sm">
+                            <Button size="sm" className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm">
+                              <CheckCircle className="h-4 w-4 mr-2" />
                               Mark Complete
                             </Button>
                           </>
                         )}
                         {task.status === 'completed' && (
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="shadow-sm">
+                            <ArrowRight className="h-4 w-4 mr-2" />
                             View Details
                           </Button>
                         )}
@@ -285,4 +342,3 @@ export default function VolunteerTasksPage() {
     </DashboardLayout>
   )
 }
-

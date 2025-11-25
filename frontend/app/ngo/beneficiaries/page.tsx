@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/AuthContext"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
-import { Users, Plus, UserCheck, Heart, MapPin, Calendar, ToggleLeft, ToggleRight } from "lucide-react"
+import { Users, Plus, UserCheck, Heart, MapPin, Calendar, ToggleLeft, ToggleRight, ArrowRight, Building2, Target, Award } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { AnimatedMetricCard } from "@/components/ui/animated-metric-card"
 
-// Mock data
 const mockBeneficiaries = [
   {
     id: "1",
@@ -59,7 +60,6 @@ export default function NGOBeneficiariesPage() {
   const { user, loading: authLoading } = useAuth()
   const [useMockData, setUseMockData] = useState(true)
 
-  // Real data from Firestore
   const { data: realBeneficiaries, loading: beneficiariesLoading } = useFirestoreCollection<{
     id: string
     ngoId: string
@@ -99,20 +99,18 @@ export default function NGOBeneficiariesPage() {
 
   return (
     <DashboardLayout title="Beneficiaries" navItems={navItems}>
-      <div className="space-y-6">
-        {/* Toggle */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Data Source</h3>
-              <p className="text-sm text-muted-foreground">
-                {useMockData ? "Showing mock data for demonstration" : "Showing real data from database"}
-              </p>
-            </div>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Beneficiaries</h1>
+            <p className="text-muted-foreground mt-1">Manage your beneficiaries and recipients</p>
+          </div>
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={() => setUseMockData(!useMockData)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 shadow-sm"
             >
               {useMockData ? (
                 <>
@@ -126,61 +124,59 @@ export default function NGOBeneficiariesPage() {
                 </>
               )}
             </Button>
+            <Button className="shadow-lg bg-gradient-to-r from-teal-500 to-teal-600">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Beneficiary
+            </Button>
           </div>
-        </Card>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Beneficiaries</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold">{stats.active}</p>
-              </div>
-              <UserCheck className="h-8 w-8 text-green-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total People</p>
-                <p className="text-2xl font-bold">{stats.totalPeople}</p>
-              </div>
-              <Heart className="h-8 w-8 text-red-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Organizations</p>
-                <p className="text-2xl font-bold">{stats.organizations}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-500" />
-            </div>
-          </Card>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-end">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Beneficiary
-          </Button>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <AnimatedMetricCard
+            title="Total Beneficiaries"
+            value={stats.total}
+            icon={Users}
+            gradient="from-teal-500 to-cyan-500"
+            bgGradient="from-teal-500/10 to-cyan-500/10"
+          />
+          <AnimatedMetricCard
+            title="Active"
+            value={stats.active}
+            icon={UserCheck}
+            gradient="from-emerald-500 to-teal-500"
+            bgGradient="from-emerald-500/10 to-teal-500/10"
+          />
+          <AnimatedMetricCard
+            title="Total People"
+            value={stats.totalPeople}
+            icon={Heart}
+            gradient="from-rose-500 to-pink-500"
+            bgGradient="from-rose-500/10 to-pink-500/10"
+          />
+          <AnimatedMetricCard
+            title="Organizations"
+            value={stats.organizations}
+            icon={Building2}
+            gradient="from-amber-500 to-orange-500"
+            bgGradient="from-amber-500/10 to-orange-500/10"
+          />
         </div>
 
-        {/* Beneficiaries List */}
-        <Card>
+        {/* Beneficiaries Grid */}
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-6">All Beneficiaries</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-teal-500/10">
+                  <Users className="h-5 w-5 text-teal-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">All Beneficiaries</h2>
+                  <p className="text-sm text-muted-foreground">{beneficiaries.length} total beneficiaries</p>
+                </div>
+              </div>
+            </div>
 
             {loading ? (
               <div className="text-center py-12">
@@ -189,14 +185,17 @@ export default function NGOBeneficiariesPage() {
               </div>
             ) : beneficiaries.length === 0 ? (
               <div className="text-center py-12">
-                <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <div className="relative inline-flex items-center justify-center mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-teal-500/10 rounded-full blur-xl"></div>
+                  <Users className="h-16 w-16 text-teal-500 relative z-10" />
+                </div>
                 <h3 className="text-lg font-semibold mb-2">No beneficiaries found</h3>
                 <p className="text-muted-foreground mb-4">
                   {useMockData 
                     ? "Mock data is empty. Switch to real data or add a beneficiary."
                     : "You haven't added any beneficiaries yet."}
                 </p>
-                <Button>
+                <Button className="bg-gradient-to-r from-teal-500 to-teal-600">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Your First Beneficiary
                 </Button>
@@ -204,54 +203,67 @@ export default function NGOBeneficiariesPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {beneficiaries.map((beneficiary) => (
-                  <Card key={beneficiary.id} className="p-4">
-                    <div className="space-y-3">
+                  <Card 
+                    key={beneficiary.id} 
+                    className="p-5 border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-card to-muted/30 border-2 hover:border-teal-500/50"
+                  >
+                    <div className="space-y-4">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-lg">{beneficiary.name}</h3>
-                          <Badge className="mt-1">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg mb-2">{beneficiary.name}</h3>
+                          <Badge className="bg-teal-500/20 text-teal-700 dark:text-teal-400 border-teal-500/30">
                             {beneficiary.category || 'Family'}
                           </Badge>
                         </div>
-                        <Badge className={beneficiary.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}>
+                        <Badge className={cn(
+                          "shadow-sm",
+                          beneficiary.status === 'active' ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'
+                        )}>
                           {beneficiary.status}
                         </Badge>
                       </div>
+                      
                       <div className="space-y-2 text-sm">
                         {beneficiary.age && (
-                          <div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <UserCheck className="h-4 w-4 text-muted-foreground" />
                             <span className="text-muted-foreground">Age: </span>
                             <span className="font-medium">{beneficiary.age} years</span>
                           </div>
                         )}
-                        <div>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <Users className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">Family Size: </span>
                           <span className="font-medium">
                             {beneficiary.familySize || beneficiary.family_size || 1} people
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{beneficiary.location}</span>
+                          <span className="text-muted-foreground truncate">{beneficiary.location}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">
                             Last served: {new Date(beneficiary.lastServed || beneficiary.last_served || Date.now()).toLocaleDateString()}
                           </span>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <Award className="h-4 w-4 text-muted-foreground" />
                           <span className="text-muted-foreground">Total served: </span>
                           <span className="font-medium">
                             {beneficiary.totalServed || beneficiary.total_served || 0} times
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm" className="flex-1">
+                      
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Button variant="outline" size="sm" className="flex-1 shadow-sm">
+                          <ArrowRight className="h-3 w-3 mr-1" />
                           View Details
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button variant="outline" size="sm" className="flex-1 shadow-sm">
+                          <UserCheck className="h-3 w-3 mr-1" />
                           Edit
                         </Button>
                       </div>
@@ -266,4 +278,3 @@ export default function NGOBeneficiariesPage() {
     </DashboardLayout>
   )
 }
-

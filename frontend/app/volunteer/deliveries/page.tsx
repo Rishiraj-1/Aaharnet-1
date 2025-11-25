@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/AuthContext"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
-import { Package, MapPin, Clock, CheckCircle, Truck, ToggleLeft, ToggleRight, Award } from "lucide-react"
+import { Package, MapPin, Clock, CheckCircle, Truck, ToggleLeft, ToggleRight, Award, Route, ArrowRight, TrendingUp, Target } from "lucide-react"
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { AnimatedMetricCard } from "@/components/ui/animated-metric-card"
 
-// Mock data
 const mockDeliveries = [
   {
     id: "1",
@@ -62,7 +63,6 @@ export default function VolunteerDeliveriesPage() {
   const { user, loading: authLoading } = useAuth()
   const [useMockData, setUseMockData] = useState(true)
 
-  // Real data from Firestore
   const { data: realDeliveries, loading: deliveriesLoading } = useFirestoreCollection<{
     id: string
     volunteerId: string
@@ -109,7 +109,7 @@ export default function VolunteerDeliveriesPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'bg-green-500'
+        return 'bg-emerald-500'
       case 'in_progress':
       case 'assigned':
         return 'bg-blue-500'
@@ -122,81 +122,78 @@ export default function VolunteerDeliveriesPage() {
 
   return (
     <DashboardLayout title="My Deliveries" navItems={navItems}>
-      <div className="space-y-6">
-        {/* Toggle */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Data Source</h3>
-              <p className="text-sm text-muted-foreground">
-                {useMockData ? "Showing mock data for demonstration" : "Showing real data from database"}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setUseMockData(!useMockData)}
-              className="flex items-center gap-2"
-            >
-              {useMockData ? (
-                <>
-                  <ToggleLeft className="h-4 w-4" />
-                  Switch to Real Data
-                </>
-              ) : (
-                <>
-                  <ToggleRight className="h-4 w-4" />
-                  Switch to Mock Data
-                </>
-              )}
-            </Button>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">My Deliveries</h1>
+            <p className="text-muted-foreground mt-1">Track your delivery history and impact</p>
           </div>
-        </Card>
+          <Button
+            variant="outline"
+            onClick={() => setUseMockData(!useMockData)}
+            className="flex items-center gap-2 shadow-sm"
+          >
+            {useMockData ? (
+              <>
+                <ToggleLeft className="h-4 w-4" />
+                Switch to Real Data
+              </>
+            ) : (
+              <>
+                <ToggleRight className="h-4 w-4" />
+                Switch to Mock Data
+              </>
+            )}
+          </Button>
+        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Deliveries</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Truck className="h-8 w-8 text-primary" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold">{stats.completed}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Distance</p>
-                <p className="text-2xl font-bold">{stats.totalDistance.toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">km</p>
-              </div>
-              <MapPin className="h-8 w-8 text-blue-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Impact Points</p>
-                <p className="text-2xl font-bold">{stats.totalPoints}</p>
-              </div>
-              <Award className="h-8 w-8 text-yellow-500" />
-            </div>
-          </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <AnimatedMetricCard
+            title="Total Deliveries"
+            value={stats.total}
+            icon={Truck}
+            gradient="from-blue-500 to-cyan-500"
+            bgGradient="from-blue-500/10 to-cyan-500/10"
+          />
+          <AnimatedMetricCard
+            title="Completed"
+            value={stats.completed}
+            icon={CheckCircle}
+            gradient="from-emerald-500 to-teal-500"
+            bgGradient="from-emerald-500/10 to-teal-500/10"
+          />
+          <AnimatedMetricCard
+            title="Total Distance"
+            value={`${stats.totalDistance.toFixed(1)} km`}
+            icon={Route}
+            gradient="from-amber-500 to-orange-500"
+            bgGradient="from-amber-500/10 to-orange-500/10"
+          />
+          <AnimatedMetricCard
+            title="Impact Points"
+            value={stats.totalPoints}
+            icon={Award}
+            gradient="from-rose-500 to-pink-500"
+            bgGradient="from-rose-500/10 to-pink-500/10"
+          />
         </div>
 
         {/* Deliveries List */}
-        <Card>
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-6">Delivery History</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Truck className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Delivery History</h2>
+                  <p className="text-sm text-muted-foreground">{deliveries.length} total deliveries</p>
+                </div>
+              </div>
+            </div>
 
             {loading ? (
               <div className="text-center py-12">
@@ -205,7 +202,10 @@ export default function VolunteerDeliveriesPage() {
               </div>
             ) : deliveries.length === 0 ? (
               <div className="text-center py-12">
-                <Truck className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <div className="relative inline-flex items-center justify-center mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-500/10 rounded-full blur-xl"></div>
+                  <Truck className="h-16 w-16 text-blue-500 relative z-10" />
+                </div>
                 <h3 className="text-lg font-semibold mb-2">No deliveries found</h3>
                 <p className="text-muted-foreground mb-4">
                   {useMockData 
@@ -213,80 +213,119 @@ export default function VolunteerDeliveriesPage() {
                     : "You haven't completed any deliveries yet."}
                 </p>
                 <Link href="/volunteer/tasks">
-                  <Button>
+                  <Button className="bg-gradient-to-r from-blue-500 to-blue-600">
+                    <Target className="h-4 w-4 mr-2" />
                     View Available Tasks
                   </Button>
                 </Link>
               </div>
             ) : (
               <div className="space-y-4">
-                {deliveries.map((delivery) => (
-                  <Card key={delivery.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(delivery.status)}>
-                            {delivery.status}
-                          </Badge>
-                          {(delivery as any).points > 0 && (
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <Award className="h-3 w-3" />
-                              {(delivery as any).points} points
+                {deliveries.map((delivery) => {
+                  const completedDate = delivery.completedAt || delivery.completed_at
+                  return (
+                    <Card 
+                      key={delivery.id} 
+                      className={cn(
+                        "p-5 border-0 shadow-md hover:shadow-lg transition-all duration-300",
+                        "bg-gradient-to-br from-card to-muted/30",
+                        delivery.status === 'completed' && "border-2 border-emerald-500/20"
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-4">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <Badge className={cn(getStatusColor(delivery.status), "text-white shadow-sm")}>
+                              {delivery.status}
                             </Badge>
+                            {(delivery as any).points > 0 && (
+                              <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 flex items-center gap-1">
+                                <Award className="h-3 w-3" />
+                                {(delivery as any).points} points
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-semibold text-xl mb-2 flex items-center gap-2">
+                              <Package className="h-5 w-5 text-blue-500" />
+                              {(delivery.quantity || delivery.quantity_kg || 0)} kg - {delivery.foodType || delivery.food_type}
+                            </h3>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                              <div className="p-2 rounded-lg bg-blue-500/10">
+                                <MapPin className="h-4 w-4 text-blue-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground">Pickup</p>
+                                <p className="font-semibold truncate">{delivery.pickupLocation}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                              <div className="p-2 rounded-lg bg-emerald-500/10">
+                                <Target className="h-4 w-4 text-emerald-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground">Delivery</p>
+                                <p className="font-semibold truncate">{delivery.deliveryLocation}</p>
+                              </div>
+                            </div>
+                            
+                            {delivery.distance && (
+                              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                                <div className="p-2 rounded-lg bg-amber-500/10">
+                                  <Route className="h-4 w-4 text-amber-500" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Distance</p>
+                                  <p className="font-semibold">{delivery.distance} km</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {completedDate && (
+                              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                                <div className="p-2 rounded-lg bg-purple-500/10">
+                                  <Clock className="h-4 w-4 text-purple-500" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Completed</p>
+                                  <p className="font-semibold">
+                                    {new Date(completedDate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2 ml-4">
+                          {delivery.status === 'completed' && (
+                            <Button variant="outline" size="sm" className="shadow-sm">
+                              <ArrowRight className="h-4 w-4 mr-2" />
+                              View Details
+                            </Button>
+                          )}
+                          {(delivery.status === 'in_progress' || delivery.status === 'assigned') && (
+                            <>
+                              <Button variant="outline" size="sm" className="shadow-sm">
+                                <Route className="h-4 w-4 mr-2" />
+                                View Route
+                              </Button>
+                              <Button size="sm" className="bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm">
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Mark Complete
+                              </Button>
+                            </>
                           )}
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            {(delivery.quantity || delivery.quantity_kg || 0)} kg - {delivery.foodType || delivery.food_type}
-                          </h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">Pickup: {delivery.pickupLocation}</p>
-                              <p className="text-muted-foreground">Delivery: {delivery.deliveryLocation}</p>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            {delivery.distance && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Distance: </span>
-                                <span className="font-medium">{delivery.distance} km</span>
-                              </div>
-                            )}
-                            {delivery.completedAt && (
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Completed: </span>
-                                <span className="font-medium">
-                                  {new Date(delivery.completedAt || delivery.completed_at || Date.now()).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        {delivery.status === 'completed' && (
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                        )}
-                        {(delivery.status === 'in_progress' || delivery.status === 'assigned') && (
-                          <>
-                            <Button variant="outline" size="sm">
-                              View Route
-                            </Button>
-                            <Button size="sm">
-                              Mark Complete
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -295,4 +334,3 @@ export default function VolunteerDeliveriesPage() {
     </DashboardLayout>
   )
 }
-

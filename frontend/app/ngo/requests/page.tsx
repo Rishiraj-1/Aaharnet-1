@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/AuthContext"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
-import { Package, Plus, Clock, CheckCircle, XCircle, AlertCircle, ToggleLeft, ToggleRight, MapPin } from "lucide-react"
+import { Package, Plus, Clock, CheckCircle, XCircle, AlertCircle, ToggleLeft, ToggleRight, MapPin, Sparkles, Users } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { AnimatedMetricCard } from "@/components/ui/animated-metric-card"
 
 // Mock data
 const mockRequests = [
@@ -95,10 +97,10 @@ export default function NGORequestsPage() {
     switch (status.toLowerCase()) {
       case 'fulfilled':
       case 'completed':
-        return 'bg-green-500'
+        return 'bg-emerald-500'
       case 'active':
       case 'pending':
-        return 'bg-yellow-500'
+        return 'bg-amber-500'
       case 'cancelled':
         return 'bg-red-500'
       default:
@@ -111,7 +113,7 @@ export default function NGORequestsPage() {
       case 'high':
         return 'bg-red-500'
       case 'medium':
-        return 'bg-yellow-500'
+        return 'bg-amber-500'
       case 'low':
         return 'bg-blue-500'
       default:
@@ -128,20 +130,18 @@ export default function NGORequestsPage() {
 
   return (
     <DashboardLayout title="Food Requests" navItems={navItems}>
-      <div className="space-y-6">
-        {/* Toggle */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Data Source</h3>
-              <p className="text-sm text-muted-foreground">
-                {useMockData ? "Showing mock data for demonstration" : "Showing real data from database"}
-              </p>
-            </div>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Food Requests</h1>
+            <p className="text-muted-foreground mt-1">Manage your food requests and requirements</p>
+          </div>
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={() => setUseMockData(!useMockData)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 shadow-sm"
             >
               {useMockData ? (
                 <>
@@ -155,62 +155,59 @@ export default function NGORequestsPage() {
                 </>
               )}
             </Button>
+            <Button className="shadow-lg bg-gradient-to-r from-primary to-primary/80">
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Request
+            </Button>
           </div>
-        </Card>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Requests</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Package className="h-8 w-8 text-primary" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Fulfilled</p>
-                <p className="text-2xl font-bold">{stats.fulfilled}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Quantity</p>
-                <p className="text-2xl font-bold">{stats.totalQuantity}</p>
-                <p className="text-xs text-muted-foreground">kg</p>
-              </div>
-              <Package className="h-8 w-8 text-orange-500" />
-            </div>
-          </Card>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-end">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create New Request
-          </Button>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <AnimatedMetricCard
+            title="Total Requests"
+            value={stats.total}
+            icon={Package}
+            gradient="from-blue-500 to-cyan-500"
+            bgGradient="from-blue-500/10 to-cyan-500/10"
+          />
+          <AnimatedMetricCard
+            title="Pending"
+            value={stats.pending}
+            icon={Clock}
+            gradient="from-amber-500 to-orange-500"
+            bgGradient="from-amber-500/10 to-orange-500/10"
+          />
+          <AnimatedMetricCard
+            title="Fulfilled"
+            value={stats.fulfilled}
+            icon={CheckCircle}
+            gradient="from-emerald-500 to-teal-500"
+            bgGradient="from-emerald-500/10 to-teal-500/10"
+          />
+          <AnimatedMetricCard
+            title="Total Quantity"
+            value={`${stats.totalQuantity} kg`}
+            icon={Package}
+            gradient="from-rose-500 to-pink-500"
+            bgGradient="from-rose-500/10 to-pink-500/10"
+          />
         </div>
 
         {/* Requests List */}
-        <Card>
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-6">All Requests</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">All Requests</h2>
+                  <p className="text-sm text-muted-foreground">{requests.length} total requests</p>
+                </div>
+              </div>
+            </div>
 
             {loading ? (
               <div className="text-center py-12">
@@ -219,14 +216,17 @@ export default function NGORequestsPage() {
               </div>
             ) : requests.length === 0 ? (
               <div className="text-center py-12">
-                <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <div className="relative inline-flex items-center justify-center mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl"></div>
+                  <Package className="h-16 w-16 text-primary relative z-10" />
+                </div>
                 <h3 className="text-lg font-semibold mb-2">No requests found</h3>
                 <p className="text-muted-foreground mb-4">
                   {useMockData 
                     ? "Mock data is empty. Switch to real data or create a request."
                     : "You haven't created any requests yet."}
                 </p>
-                <Button>
+                <Button className="bg-gradient-to-r from-primary to-primary/80">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Request
                 </Button>
@@ -234,60 +234,92 @@ export default function NGORequestsPage() {
             ) : (
               <div className="space-y-4">
                 {requests.map((request) => (
-                  <Card key={request.id} className="p-4">
+                  <Card 
+                    key={request.id} 
+                    className={cn(
+                      "p-5 border-0 shadow-md hover:shadow-lg transition-all duration-300",
+                      "bg-gradient-to-br from-card to-muted/30",
+                      request.status === 'fulfilled' && "opacity-75"
+                    )}
+                  >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge className={getStatusColor(request.status)}>
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge className={cn(getStatusColor(request.status), "text-white shadow-sm")}>
                             {request.status}
                           </Badge>
-                          <Badge className={getPriorityColor(request.priority)}>
+                          <Badge className={cn(getPriorityColor(request.priority), "text-white shadow-sm")}>
                             {request.priority} priority
                           </Badge>
                         </div>
+                        
                         <div>
-                          <h3 className="font-semibold text-lg mb-1">
+                          <h3 className="font-semibold text-xl mb-2 flex items-center gap-2">
+                            <Package className="h-5 w-5 text-primary" />
                             {request.quantityKg || request.quantity_kg} kg
                           </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {(request.foodTypes || request.food_types || []).join(", ")}
-                          </p>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {(request.foodTypes || request.food_types || []).map((type, idx) => (
+                              <Badge key={idx} variant="outline" className="border-primary/20">
+                                {type}
+                              </Badge>
+                            ))}
+                          </div>
+                          {request.description && (
+                            <p className="text-sm text-muted-foreground mb-4">{request.description}</p>
+                          )}
                         </div>
-                        {request.description && (
-                          <p className="text-sm">{request.description}</p>
-                        )}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{request.location}</span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <MapPin className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground">Location</p>
+                              <p className="font-semibold truncate">{request.location}</p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Beneficiaries: </span>
-                            <span className="font-medium">
-                              {request.beneficiaries || request.beneficiaries_served || 0}
-                            </span>
+                          
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <Users className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Beneficiaries</p>
+                              <p className="font-semibold">
+                                {request.beneficiaries || request.beneficiaries_served || 0}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Created: </span>
-                            <span className="font-medium">
-                              {new Date(request.createdAt || request.created_at || Date.now()).toLocaleDateString()}
-                            </span>
+                          
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <Clock className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Created</p>
+                              <p className="font-semibold">
+                                {new Date(request.createdAt || request.created_at || Date.now()).toLocaleDateString()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      
+                      <div className="flex flex-col gap-2 ml-4">
                         {(request.status === 'pending' || request.status === 'active') && (
                           <>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="shadow-sm">
                               Edit
                             </Button>
-                            <Button variant="outline" size="sm" className="text-destructive">
+                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive shadow-sm">
                               Cancel
                             </Button>
                           </>
                         )}
                         {request.status === 'fulfilled' && (
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="shadow-sm">
                             View Details
                           </Button>
                         )}
@@ -303,4 +335,3 @@ export default function NGORequestsPage() {
     </DashboardLayout>
   )
 }
-

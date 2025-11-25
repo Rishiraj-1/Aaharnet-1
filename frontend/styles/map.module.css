@@ -61,3 +61,80 @@
   }
 }
 
+/* Prevent popup from closing when clicking inside */
+.leaflet-popup-content-wrapper {
+  pointer-events: auto !important;
+}
+
+.leaflet-popup-content {
+  pointer-events: auto !important;
+}
+
+.leaflet-popup-content * {
+  pointer-events: auto !important;
+}
+
+/* Prevent map clicks from closing popup when clicking inside popup */
+.leaflet-popup {
+  pointer-events: none !important;
+}
+
+.leaflet-popup-content-wrapper {
+  pointer-events: auto !important;
+  cursor: default;
+}
+
+/* Additional popup stability fixes */
+.donation-popup {
+  pointer-events: auto !important;
+}
+
+.donation-popup .leaflet-popup-content-wrapper {
+  pointer-events: auto !important;
+}
+
+.donation-popup .leaflet-popup-content {
+  pointer-events: auto !important;
+}
+
+/* Popup content wrapper - prevent all event propagation */
+.popup-content-wrapper {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1001 !important;
+}
+
+.popup-content-wrapper * {
+  pointer-events: auto !important;
+}
+
+/* Prevent any map interactions from affecting popup */
+.leaflet-container:has(.donation-popup) {
+  cursor: default;
+}
+
+/* Ensure popup stays on top and doesn't get affected by map events */
+.leaflet-popup-pane {
+  z-index: 1000 !important;
+  pointer-events: none !important;
+}
+
+.leaflet-popup-pane .leaflet-popup {
+  pointer-events: auto !important;
+}
+
+/* Prevent map dragging when popup is open */
+.leaflet-container.leaflet-dragging-disabled {
+  cursor: default !important;
+}
+
+/* Ensure buttons inside popup are clickable */
+.leaflet-popup-content-wrapper button,
+.leaflet-popup-content-wrapper a,
+.leaflet-popup-content-wrapper input,
+.leaflet-popup-content-wrapper select,
+.leaflet-popup-content-wrapper textarea {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
