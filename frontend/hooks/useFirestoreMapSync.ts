@@ -109,18 +109,16 @@ export function useFirestoreMapSync({
       const constraints: QueryConstraint[] = []
       
       // Role-based filtering
-      if (filters?.userRole === 'donor' && filters?.userId) {
-        // Donors see their own donations + available ones
-        // We'll filter client-side for "available" to avoid complex queries
-        constraints.push(where('donorId', '==', filters.userId))
-      } else if (filters?.userRole === 'ngo') {
+      // Note: For donors, we don't filter by donorId here because they need to see
+      // both their own donations AND available donations. Client-side filtering handles this.
+      if (filters?.userRole === 'ngo') {
         // NGOs see only available donations
         constraints.push(where('status', '==', 'available'))
       } else if (filters?.userRole === 'volunteer' && filters?.userId) {
         // Volunteers see assigned/picked donations
         constraints.push(where('volunteerId', '==', filters.userId))
       }
-      // Admin sees all (no filters)
+      // Admin and Donor see all (filtered client-side in IndoreMap.tsx)
       
       if (filters?.status && filters?.userRole !== 'ngo') {
         constraints.push(where('status', '==', filters.status))
@@ -134,8 +132,24 @@ export function useFirestoreMapSync({
         : collection(db, 'donations')
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        debouncedUpdate(() => {
+        // Use debounced update for initial loads, but immediate update for changes
+        const updateFn = () => {
           const docs: Donation[] = []
+          const changes = snapshot.docChanges()
+          
+          // Log changes for debugging
+          if (changes.length > 0) {
+            console.log(`[useFirestoreMapSync] Donations changed: ${changes.length} changes`)
+            changes.forEach(change => {
+              if (change.type === 'modified') {
+                const data = change.doc.data()
+                const lat = data.lat || data.latitude || (data.location?.lat) || (data.location?.latitude)
+                const lng = data.lng || data.longitude || (data.location?.lng) || (data.location?.longitude)
+                console.log(`[useFirestoreMapSync] Donation ${change.doc.id} modified - new location: ${lat}, ${lng}`)
+              }
+            })
+          }
+          
           snapshot.forEach((doc) => {
             const data = doc.data()
             // Handle different location field formats
@@ -156,9 +170,20 @@ export function useFirestoreMapSync({
             }
           })
           setDonations(docs)
-        })
+          setLastUpdateTs(Date.now())
+        }
+
+        // Check if this is a metadata-only change (like updatedAt) or actual data change
+        const hasChanges = snapshot.docChanges().length > 0
+        if (hasChanges) {
+          // For updates, apply immediately (no debounce) to show location changes in real-time
+          updateFn()
+        } else {
+          // For initial load, use debounce
+          debouncedUpdate(updateFn)
+        }
       }, (error) => {
-        console.error('Error listening to donations:', error)
+        console.error('[useFirestoreMapSync] Error listening to donations:', error)
       })
 
       unsubscribeRefs.current.push(unsubscribe)

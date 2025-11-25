@@ -59,6 +59,16 @@ interface AssignVolunteerData {
   volunteerId: string
 }
 
+interface UpdateDonationData {
+  lat?: number
+  lng?: number
+  qtyKg?: number
+  foodType?: string
+  imageUrl?: string
+  freshnessScore?: number
+  status?: string
+}
+
 /**
  * Create a new donation
  */
@@ -166,6 +176,63 @@ export async function createDonation(data: CreateDonationData) {
     
     // Fallback for unknown errors
     throw new Error(`An unexpected error occurred: ${error.message || 'Unknown error'}. Please try again.`)
+  }
+}
+
+/**
+ * Update a donation (Donor)
+ */
+export async function updateDonation(donationId: string, data: UpdateDonationData) {
+  const token = await getCurrentUserToken()
+  if (!token) {
+    throw new Error('Authentication required')
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/donations/${donationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data),
+      signal: controller.signal
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || error.detail || 'Failed to update donation')
+    }
+
+    return response.json()
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.')
+    }
+    
+    if (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('fetch'))) {
+      const isLocalhost = BACKEND_URL.includes('127.0.0.1') || BACKEND_URL.includes('localhost')
+      const troubleshooting = isLocalhost 
+        ? `\n\nTroubleshooting:\n1. Start backend: python main.py (in backend directory)\n2. Test: ${BACKEND_URL}/health\n3. Check CORS settings`
+        : `\n\nPlease verify backend server is running and accessible.`
+      
+      throw new Error(
+        `Cannot connect to backend server at ${BACKEND_URL}.${troubleshooting}`
+      )
+    }
+    
+    if (error instanceof Error && error.message) {
+      throw error
+    }
+    
+    throw new Error('An unexpected error occurred while updating the donation. Please try again.')
   }
 }
 

@@ -29,6 +29,15 @@ class DonationClaim(BaseModel):
     donationId: str
     ngoId: Optional[str] = None
 
+class DonationUpdate(BaseModel):
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    qtyKg: Optional[float] = None
+    foodType: Optional[str] = None
+    imageUrl: Optional[str] = None
+    freshnessScore: Optional[float] = None
+    status: Optional[str] = None
+
 class DonationResponse(BaseModel):
     id: str
     donorId: str
@@ -257,5 +266,101 @@ async def get_donations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get donations: {str(e)}"
+        )
+
+@router.put("/donations/{donation_id}", response_model=DonationResponse)
+async def update_donation(
+    donation_id: str,
+    donation_update: DonationUpdate,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Update a donation (only by the donor who created it)
+    """
+    try:
+        db = firebase_config.get_firestore_client()
+        
+        # Get donation document
+        donation_ref = db.collection('donations').document(donation_id)
+        donation_doc = donation_ref.get()
+
+        if not donation_doc.exists:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Donation not found"
+            )
+
+        donation_data = donation_doc.to_dict()
+
+        # Verify user is the donor who created this donation
+        if donation_data.get('donorId') != current_user['uid']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update your own donations"
+            )
+
+        # Build update dictionary (only include fields that are provided)
+        update_data = {}
+        if donation_update.lat is not None:
+            update_data['lat'] = donation_update.lat
+        if donation_update.lng is not None:
+            update_data['lng'] = donation_update.lng
+        if donation_update.qtyKg is not None:
+            update_data['qtyKg'] = donation_update.qtyKg
+        if donation_update.foodType is not None:
+            update_data['foodType'] = donation_update.foodType
+        if donation_update.imageUrl is not None:
+            update_data['imageUrl'] = donation_update.imageUrl
+        if donation_update.freshnessScore is not None:
+            update_data['freshnessScore'] = donation_update.freshnessScore
+        if donation_update.status is not None:
+            update_data['status'] = donation_update.status
+
+        # Add updated timestamp
+        update_data['updatedAt'] = datetime.now()
+
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+
+        # Update donation document
+        donation_ref.update(update_data)
+        logger.info(f"Donation {donation_id} update data written to Firestore: {update_data}")
+
+        # Get updated document
+        updated_doc = donation_ref.get()
+        updated_data = updated_doc.to_dict()
+
+        logger.info(f"Donation {donation_id} updated by {current_user['uid']}. New location: lat={updated_data.get('lat')}, lng={updated_data.get('lng')}")
+
+        # Convert createdAt to string if it's a datetime
+        created_at = updated_data.get('createdAt')
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+        elif hasattr(created_at, 'isoformat'):
+            created_at = created_at.isoformat()
+
+        return DonationResponse(
+            id=donation_id,
+            donorId=updated_data.get('donorId', ''),
+            lat=updated_data.get('lat', 0),
+            lng=updated_data.get('lng', 0),
+            qtyKg=updated_data.get('qtyKg', 0),
+            foodType=updated_data.get('foodType', ''),
+            freshnessScore=updated_data.get('freshnessScore'),
+            status=updated_data.get('status', 'available'),
+            createdAt=created_at or datetime.now().isoformat(),
+            imageUrl=updated_data.get('imageUrl')
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating donation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update donation: {str(e)}"
         )
 

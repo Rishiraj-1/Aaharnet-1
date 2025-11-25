@@ -15,6 +15,7 @@ import { useRole } from '@/hooks/useRole'
 import { useFirestoreMapSync } from '@/hooks/useFirestoreMapSync'
 import { ClusteredMarkers } from './ClusteredMarkers'
 import { HeatmapLayer } from './HeatmapLayer'
+import { MapLegend } from './MapLegend'
 import { RolePanelDonor } from './RolePanelDonor'
 import { RolePanelNGO } from './RolePanelNGO'
 import { RolePanelVolunteer } from './RolePanelVolunteer'
@@ -435,6 +436,9 @@ export function IndoreMap() {
         )}
       </MapContainer>
 
+      {/* Map Legend */}
+      <MapLegend />
+
       {/* Map Controls */}
       <MapControls
         onHeatmapToggle={() => {
@@ -458,6 +462,11 @@ export function IndoreMap() {
           donations={filteredDonations}
           userId={userId}
           onAction={handleRoleAction}
+          onLocationCaptured={(lat, lng) => {
+            // Center map on captured location
+            setUserLocation([lat, lng])
+            toast.info('Map centered on your location')
+          }}
         />
       )}
       {userRole === 'ngo' && (

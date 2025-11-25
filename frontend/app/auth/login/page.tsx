@@ -24,11 +24,18 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-      router.push('/dashboard')
-    } catch (error) {
+      // Small delay to ensure auth state is updated
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 100)
+    } catch (error: any) {
       console.error('Login error:', error)
+      // Error toast is already shown in signIn function
     } finally {
-      setLoading(false)
+      // Don't set loading to false immediately - let auth state handle it
+      setTimeout(() => {
+        setLoading(false)
+      }, 500)
     }
   }
 

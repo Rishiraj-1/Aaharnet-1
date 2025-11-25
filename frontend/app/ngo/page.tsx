@@ -66,11 +66,37 @@ export default function NGODashboard() {
   })
 
   // AI forecasting for demand prediction
-  const demandForecastRequest = distributions && distributions.length > 0 ? {
-    location: user?.location || 'default',
-    category: 'all',
-    days_ahead: 7
-  } : null
+  // Generate historical_data from distributions for the forecast
+  const demandForecastRequest = distributions && distributions.length > 0 ? (() => {
+    // Group distributions by date and sum quantities
+    const distributionsByDate = new Map<string, number>()
+    
+    distributions.forEach(distribution => {
+      const date = distribution.created_at 
+        ? new Date(distribution.created_at).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0]
+      
+      const qty = distribution.quantity_kg || 0
+      distributionsByDate.set(date, (distributionsByDate.get(date) || 0) + qty)
+    })
+    
+    // Convert to historical_data format required by backend
+    const historical_data = Array.from(distributionsByDate.entries())
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    
+    // Need at least 7 days of data for forecast
+    if (historical_data.length < 7) {
+      return null
+    }
+    
+    return {
+      historical_data,
+      forecast_days: 7,
+      food_type: undefined,
+      location: user?.location || undefined
+    }
+  })() : null
   
   const { forecast, loading: forecastLoading } = useDemandForecast(demandForecastRequest)
 

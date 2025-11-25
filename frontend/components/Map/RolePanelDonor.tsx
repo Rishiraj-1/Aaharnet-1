@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Plus, Package, CheckCircle, Clock } from 'lucide-react'
+import { Plus, Package, CheckCircle, Clock, MapPin, MapPinOff } from 'lucide-react'
 import { createDonation } from '@/lib/api/mapApi'
 import { toast } from 'sonner'
 import { useAuth } from '@/context/AuthContext'
+import { useRealtimeLocation } from '@/hooks/useRealtimeLocation'
 
 interface Donation {
   id: string
@@ -31,9 +32,10 @@ interface RolePanelDonorProps {
   donations: Donation[]
   userId: string
   onAction: () => void
+  onLocationCaptured?: (lat: number, lng: number) => void
 }
 
-export function RolePanelDonor({ donations, userId, onAction }: RolePanelDonorProps) {
+export function RolePanelDonor({ donations, userId, onAction, onLocationCaptured }: RolePanelDonorProps) {
   const { user } = useAuth()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -48,6 +50,34 @@ export function RolePanelDonor({ donations, userId, onAction }: RolePanelDonorPr
   const myDonations = donations.filter(d => d.donorId === userId)
   const deliveredCount = myDonations.filter(d => d.status === 'delivered').length
   const availableCount = myDonations.filter(d => d.status === 'available').length
+  
+  // Get the first available donation for real-time tracking
+  const availableDonation = myDonations.find(d => d.status === 'available')
+  const [trackingDonationId, setTrackingDonationId] = useState<string | null>(null)
+  
+  // Real-time location tracking
+  const { location, startTracking, stopTracking, isTracking } = useRealtimeLocation({
+    enabled: false, // Controlled manually
+    updateDonationId: trackingDonationId,
+    updateInterval: 10000, // Update every 10 seconds
+    highAccuracy: true
+  })
+  
+  const handleToggleTracking = () => {
+    if (isTracking) {
+      stopTracking()
+      setTrackingDonationId(null)
+      toast.info('Real-time location tracking stopped')
+    } else {
+      if (!availableDonation) {
+        toast.error('No available donation to track. Please create a donation first.')
+        return
+      }
+      setTrackingDonationId(availableDonation.id)
+      startTracking()
+      toast.success('Real-time location tracking started')
+    }
+  }
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -66,11 +96,29 @@ export function RolePanelDonor({ donations, userId, onAction }: RolePanelDonorPr
         const { latitude, longitude } = position.coords
         const accuracy = position.coords.accuracy || 0
         
+        // Log the captured coordinates for debugging
+        console.log('[RolePanelDonor] Location captured:', { latitude, longitude, accuracy })
+        
+        // Validate coordinates are valid
+        if (isNaN(latitude) || isNaN(longitude) || latitude === 0 || longitude === 0) {
+          console.error('[RolePanelDonor] Invalid coordinates received:', { latitude, longitude })
+          toast.error('Invalid location received. Please try again.')
+          return
+        }
+        
         setFormData({
           ...formData,
           lat: latitude,
           lng: longitude
         })
+        
+        // Verify the coordinates were set correctly
+        console.log('[RolePanelDonor] Form data updated with location:', { lat: latitude, lng: longitude })
+        
+        // Notify parent component to center map on captured location
+        if (onLocationCaptured) {
+          onLocationCaptured(latitude, longitude)
+        }
         
         if (accuracy > 1000) {
           toast.warning(`Location captured (low accuracy: ${Math.round(accuracy)}m). Please enable GPS for better results.`)
@@ -116,20 +164,34 @@ export function RolePanelDonor({ donations, userId, onAction }: RolePanelDonorPr
       return
     }
 
+    // Validate coordinates before creating
+    if (!formData.lat || !formData.lng || formData.lat === 0 || formData.lng === 0) {
+      toast.error('Invalid location. Please capture your location again.')
+      return
+    }
+
     setIsCreating(true)
     try {
-      console.log('Creating donation with data:', {
+      const donationData = {
         donorId: userId,
         lat: formData.lat,
         lng: formData.lng,
         qtyKg: Number(formData.qtyKg),
         foodType: formData.foodType
-      })
+      }
+      
+      console.log('[RolePanelDonor] Creating donation with data:', donationData)
+      console.log('[RolePanelDonor] Location coordinates:', { lat: donationData.lat, lng: donationData.lng })
+      
+      // Double-check coordinates are valid numbers
+      if (isNaN(donationData.lat) || isNaN(donationData.lng)) {
+        throw new Error('Invalid location coordinates. Please capture your location again.')
+      }
       
       const result = await createDonation({
         donorId: userId,
-        lat: formData.lat,
-        lng: formData.lng,
+        lat: donationData.lat,
+        lng: donationData.lng,
         qtyKg: Number(formData.qtyKg),
         foodType: formData.foodType,
         imageUrl: formData.imageUrl || undefined,
@@ -173,6 +235,37 @@ export function RolePanelDonor({ donations, userId, onAction }: RolePanelDonorPr
             <div className="text-lg font-semibold">{availableCount}</div>
           </div>
         </div>
+
+        {/* Real-time Location Tracking */}
+        {availableDonation && (
+          <Button
+            variant={isTracking ? "default" : "outline"}
+            className="w-full"
+            onClick={handleToggleTracking}
+          >
+            {isTracking ? (
+              <>
+                <MapPinOff className="h-4 w-4 mr-2" />
+                Stop Tracking
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 mr-2" />
+                Start Real-time Tracking
+              </>
+            )}
+          </Button>
+        )}
+        
+        {isTracking && location.latitude && location.longitude && (
+          <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+            <div>Tracking: {availableDonation?.qtyKg} kg donation</div>
+            <div>Location: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</div>
+            {location.accuracy && (
+              <div>Accuracy: {Math.round(location.accuracy)}m</div>
+            )}
+          </div>
+        )}
 
         {/* Quick Create */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

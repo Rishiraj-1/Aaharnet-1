@@ -11,6 +11,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 import os
+import signal
+import sys
 from dotenv import load_dotenv
 
 # Load environment variables FIRST (before importing routes that use Firebase)
@@ -27,16 +29,19 @@ logger = logging.getLogger(__name__)
 
 def auto_seed_on_startup():
     """Automatically seed mock data on startup if collections are empty"""
+    # Auto-seeding is now disabled by default to prevent server from getting stuck
+    # Use the manual "Seed Data" button in the frontend instead
     try:
-        # Only auto-seed in development or if explicitly enabled
-        auto_seed_enabled = os.getenv("AUTO_SEED_ENABLED", "true").lower() == "true"
+        # Only auto-seed if explicitly enabled via environment variable
+        auto_seed_enabled = os.getenv("AUTO_SEED_ENABLED", "false").lower() == "true"
         
         if auto_seed_enabled:
+            logger.info("Auto-seed is enabled via AUTO_SEED_ENABLED=true")
             logger.info("Checking if data seeding is needed...")
             from utils.auto_seed import auto_seed_data
             auto_seed_data()
         else:
-            logger.info("Auto-seed is disabled (set AUTO_SEED_ENABLED=false to disable)")
+            logger.info("Auto-seed is disabled by default. Use the 'Seed Data' button in the frontend for manual seeding.")
     except Exception as e:
         logger.warning(f"Auto-seed on startup failed (non-critical): {str(e)}")
         # Don't fail startup if seeding fails
@@ -112,13 +117,49 @@ async def startup_event():
     """Run auto-seed on application startup"""
     auto_seed_on_startup()
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on application shutdown"""
+    logger.info("Shutting down server gracefully...")
+    try:
+        # Close any open connections or cleanup resources
+        # Firebase client doesn't need explicit cleanup
+        logger.info("Server shutdown complete")
+    except Exception as e:
+        logger.warning(f"Error during shutdown cleanup: {str(e)}")
+
 # All dependencies are now in dependencies.py
 
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info("\nReceived shutdown signal. Stopping server...")
+    sys.exit(0)
+
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    # Register signal handlers for graceful shutdown
+    if hasattr(signal, 'SIGINT'):
+        signal.signal(signal.SIGINT, signal_handler)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        # Use reload=False for more reliable shutdown on Windows
+        # Set reload=True only if you need auto-reload during development
+        use_reload = os.getenv("UVICORN_RELOAD", "false").lower() == "true"
+        
+        uvicorn.run(
+            "main:app",
+            host="127.0.0.1",
+            port=8000,
+            reload=use_reload,
+            log_level="info",
+            timeout_keep_alive=5,  # Reduce keep-alive timeout
+            timeout_graceful_shutdown=5,  # Graceful shutdown timeout
+            access_log=False  # Disable access logs for faster shutdown
+        )
+    except KeyboardInterrupt:
+        logger.info("\nServer stopped by user (Ctrl+C)")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Server error: {str(e)}")
+        sys.exit(1)

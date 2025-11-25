@@ -11,7 +11,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"
 import { useSurplusForecast } from "@/hooks/useForecast"
 import { useShelfLife } from "@/hooks/useShelfLife"
-import { MapPin, TrendingUp, Star, Package, Truck, Heart, Upload, Camera, Map } from "lucide-react"
+import { MapPin, TrendingUp, Star, Package, Truck, Heart, Upload, Camera, Map as MapIcon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -60,11 +60,39 @@ export default function DonorDashboard() {
   }).slice(0, 10) // Limit to 10 most recent
 
   // AI forecasting for surplus prediction
-  const forecastRequest = sortedDonations && sortedDonations.length > 0 ? {
-    location: user?.location || 'default',
-    category: 'all',
-    days_ahead: 7
-  } : null
+  // Generate historical_data from donations for the forecast
+  const forecastRequest = sortedDonations && sortedDonations.length > 0 ? (() => {
+    // Group donations by date and sum quantities
+    const donationsByDate = new Map<string, number>()
+    
+    sortedDonations.forEach(donation => {
+      const date = donation.createdAt?.toDate 
+        ? donation.createdAt.toDate().toISOString().split('T')[0]
+        : donation.created_at 
+          ? new Date(donation.created_at).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0]
+      
+      const qty = donation.qtyKg || donation.quantity_kg || 0
+      donationsByDate.set(date, (donationsByDate.get(date) || 0) + qty)
+    })
+    
+    // Convert to historical_data format required by backend
+    const historical_data = Array.from(donationsByDate.entries())
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    
+    // Need at least 7 days of data for forecast
+    if (historical_data.length < 7) {
+      return null
+    }
+    
+    return {
+      historical_data,
+      forecast_days: 7,
+      food_type: undefined,
+      location: user?.location || undefined
+    }
+  })() : null
   
   const { forecast, loading: forecastLoading } = useSurplusForecast(forecastRequest)
 
@@ -198,7 +226,7 @@ export default function DonorDashboard() {
             <div className="space-y-3">
               <Link href="/map" className="block">
                 <Button className="w-full bg-primary hover:bg-primary/90">
-                  <Map className="w-4 h-4 mr-2" />
+                  <MapIcon className="w-4 h-4 mr-2" />
                   Open Map
                 </Button>
               </Link>

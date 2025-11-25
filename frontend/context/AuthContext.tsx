@@ -41,30 +41,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (firebaseUser) {
         try {
-          // Get custom claims from token (source of truth for role)
+          // Set loading to false early so UI doesn't hang
+          // Fetch user data in parallel with token claims
+          const [userDoc, idTokenResult] = await Promise.allSettled([
+            getDoc(doc(db, 'users', firebaseUser.uid)),
+            firebaseUser.getIdTokenResult(false).catch(() => null) // Don't force refresh on initial load
+          ])
+          
+          // Get token claims (non-blocking)
           let tokenRole = null
           let isAdmin = false
-          try {
-            const idTokenResult = await firebaseUser.getIdTokenResult(true)
-            const claims = idTokenResult.claims || {}
+          if (idTokenResult.status === 'fulfilled' && idTokenResult.value) {
+            const claims = idTokenResult.value.claims || {}
             tokenRole = (claims.role as string) || null
             isAdmin = !!(claims.admin as boolean)
-          } catch (tokenError) {
-            console.warn('Could not get token claims:', tokenError)
           }
           
-          // Fetch user data from Firestore
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
-          if (userDoc.exists()) {
-            const firestoreData = userDoc.data()
-            // Sync Firestore with custom claims if they differ
+          // Process Firestore data
+          if (userDoc.status === 'fulfilled' && userDoc.value.exists()) {
+            const firestoreData = userDoc.value.data()
+            // Sync Firestore with custom claims if they differ (async, non-blocking)
             if (tokenRole && firestoreData.user_type !== tokenRole) {
-              // Update Firestore to match custom claims
-              await setDoc(doc(db, 'users', firebaseUser.uid), {
+              // Update Firestore in background (don't wait)
+              setDoc(doc(db, 'users', firebaseUser.uid), {
                 ...firestoreData,
                 user_type: isAdmin ? 'admin' : tokenRole,
                 updated_at: new Date().toISOString()
-              }, { merge: true })
+              }, { merge: true }).catch(err => {
+                console.warn('Failed to sync user type:', err)
+              })
               setUserData({
                 ...firestoreData,
                 user_type: isAdmin ? 'admin' : tokenRole
@@ -73,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUserData(firestoreData)
             }
           } else {
-            // Create user document if it doesn't exist
+            // Create user document if it doesn't exist (async, non-blocking)
             const role = isAdmin ? 'admin' : (tokenRole || 'donor')
             const newUserData = {
               uid: firebaseUser.uid,
@@ -82,11 +87,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               created_at: new Date().toISOString(),
               user_type: role,
             }
-            await setDoc(doc(db, 'users', firebaseUser.uid), newUserData)
+            // Don't wait for Firestore write
+            setDoc(doc(db, 'users', firebaseUser.uid), newUserData).catch(err => {
+              console.warn('Failed to create user document:', err)
+            })
             setUserData(newUserData)
           }
         } catch (error) {
           console.error('Error fetching user data:', error)
+          // Set minimal user data so app doesn't hang
+          setUserData({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: firebaseUser.displayName || 'User',
+            user_type: 'donor'
+          })
         }
       } else {
         setUserData(null)
@@ -102,14 +117,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       
-      // Try to login to backend (non-critical)
-      try {
-        const token = await userCredential.user.getIdToken()
-        await loginUser(token)
-      } catch (backendError) {
-        // Non-critical error - user is already authenticated in Firebase
-        console.warn('Backend login failed (non-critical):', backendError)
-      }
+      // Don't wait for backend login - it's non-critical and can cause delays
+      // Fire and forget backend login in background
+      userCredential.user.getIdToken().then(token => {
+        loginUser(token).catch(err => {
+          console.warn('Backend login failed (non-critical):', err)
+        })
+      }).catch(err => {
+        console.warn('Token fetch failed (non-critical):', err)
+      })
       
       toast.success('Successfully signed in!')
     } catch (error: any) {
@@ -204,14 +220,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
       
-      // Try to login to backend (non-critical)
-      try {
-        const token = await result.user.getIdToken()
-        await loginUser(token)
-      } catch (backendError) {
-        // Non-critical error - user is already authenticated in Firebase
-        console.warn('Backend login failed (non-critical):', backendError)
-      }
+      // Don't wait for backend login - it's non-critical and can cause delays
+      // Fire and forget backend login in background
+      result.user.getIdToken().then(token => {
+        loginUser(token).catch(err => {
+          console.warn('Backend login failed (non-critical):', err)
+        })
+      }).catch(err => {
+        console.warn('Token fetch failed (non-critical):', err)
+      })
       
       toast.success('Successfully signed in with Google!')
     } catch (error: any) {

@@ -74,10 +74,19 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
-        const alerts = await getActiveAlerts()
-        setEmergencyAlerts(alerts || [])
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timed out')), 8000)
+        )
+        const alerts = await Promise.race([
+          getActiveAlerts(),
+          timeoutPromise
+        ]) as any
+        setEmergencyAlerts(alerts?.alerts || alerts || [])
       } catch (error) {
         console.error('Failed to fetch alerts:', error)
+        // Set empty array on error so page still works
+        setEmergencyAlerts([])
       } finally {
         setLoadingAlerts(false)
       }
@@ -173,8 +182,20 @@ export default function AdminDashboard() {
         description: 'Emergency food shortage detected'
       })
       toast.success('Emergency alert created!')
-      const alerts = await getActiveAlerts()
-      setEmergencyAlerts(alerts || [])
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timed out')), 8000)
+        )
+        const alerts = await Promise.race([
+          getActiveAlerts(),
+          timeoutPromise
+        ]) as any
+        setEmergencyAlerts(alerts?.alerts || alerts || [])
+      } catch (error) {
+        console.error('Failed to refresh alerts:', error)
+        // Don't show error - alert was created successfully
+      }
     } catch (error) {
       toast.error('Failed to create emergency alert')
     }

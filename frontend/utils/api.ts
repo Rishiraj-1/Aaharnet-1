@@ -48,20 +48,34 @@ async function apiClient<T>(
     requestHeaders['Authorization'] = `Bearer ${token}`
   }
 
-  // Make API request
+  // Make API request with timeout
   const url = `${BACKEND_URL}${endpoint}`
-  const response = await fetch(url, {
-    method,
-    headers: requestHeaders,
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(errorData.error || errorData.detail || `API request failed: ${response.statusText}`)
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: requestHeaders,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || errorData.detail || `API request failed: ${response.statusText}`)
+    }
+
+    return response.json()
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection.')
+    }
+    throw error
   }
-
-  return response.json()
 }
 
 // ==========================================
@@ -377,7 +391,9 @@ export async function createEmergencyAlert(data: {
 }
 
 export async function getActiveAlerts() {
-  return apiClient<any[]>('/api/emergency/alerts')
+  return apiClient<{ alerts?: any[] }>('/api/emergency/alerts', {
+    requireAuth: true
+  })
 }
 
 export async function getDisasterData(data: {

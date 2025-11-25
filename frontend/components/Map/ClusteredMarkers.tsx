@@ -5,7 +5,7 @@
  * Displays donation markers with clustering and custom icons
  */
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { Marker, Popup, useMap } from 'react-leaflet'
 // Note: react-leaflet-cluster may need to be used differently
 // For now, we'll render markers without clustering if the package structure differs
@@ -13,10 +13,13 @@ import L from 'leaflet'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { MapPin, Clock, Package, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useMarkerIconFactory } from '@/hooks/useMarkerIconFactory'
-import { createDonation, claimDonation } from '@/lib/api/mapApi'
+import { createDonation, claimDonation, updateDonation } from '@/lib/api/mapApi'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 
@@ -117,6 +120,57 @@ export function ClusteredMarkers({
     }
   }
 
+  // Component to handle marker position updates
+  const UpdatingMarker = React.memo(({ donation, icon, children }: { donation: Donation; icon: L.Icon; children: React.ReactNode }) => {
+    const markerRef = React.useRef<L.Marker | null>(null)
+    const popupRef = React.useRef<L.Popup | null>(null)
+    const isPopupOpenRef = React.useRef(false)
+
+    React.useEffect(() => {
+      if (markerRef.current && donation.lat && donation.lng) {
+        const newPos = L.latLng(donation.lat, donation.lng)
+        const currentPos = markerRef.current.getLatLng()
+        // Only update if position actually changed significantly (avoid unnecessary updates that close popup)
+        if (!currentPos || currentPos.distanceTo(newPos) > 0.001) {
+          const wasOpen = isPopupOpenRef.current
+          markerRef.current.setLatLng(newPos)
+          // Reopen popup if it was open before position update
+          if (wasOpen && markerRef.current) {
+            setTimeout(() => {
+              markerRef.current?.openPopup()
+            }, 50)
+          }
+        }
+      }
+    }, [donation.lat, donation.lng])
+
+    return (
+      <Marker
+        ref={markerRef}
+        position={[donation.lat, donation.lng]}
+        icon={icon}
+        eventHandlers={{
+          popupopen: () => {
+            isPopupOpenRef.current = true
+          },
+          popupclose: () => {
+            isPopupOpenRef.current = false
+          }
+        }}
+      >
+        {children}
+      </Marker>
+    )
+  }, (prevProps, nextProps) => {
+    // Only re-render if position or key data changed significantly
+    return (
+      prevProps.donation.id === nextProps.donation.id &&
+      Math.abs(prevProps.donation.lat - nextProps.donation.lat) < 0.001 &&
+      Math.abs(prevProps.donation.lng - nextProps.donation.lng) < 0.001 &&
+      prevProps.donation.status === nextProps.donation.status
+    )
+  })
+
   const donationMarkers = useMemo(() => {
     return donations
       .filter(d => d.lat && d.lng)
@@ -133,12 +187,12 @@ export function ClusteredMarkers({
         })
 
         return (
-          <Marker
+          <UpdatingMarker
             key={`donation-${donation.id}`}
-            position={[donation.lat, donation.lng]}
+            donation={donation}
             icon={icon}
           >
-            <Popup>
+            <Popup closeOnClick={false} autoClose={false} closeButton={true}>
               <Card className="p-3 w-64">
                 <div className="space-y-2">
                   {/* Header */}
@@ -242,7 +296,7 @@ export function ClusteredMarkers({
                 </div>
               </Card>
             </Popup>
-          </Marker>
+          </UpdatingMarker>
         )
       })
   }, [donations, userRole, userId, getIcon, handleClaim, handleEdit, handleAssign])
@@ -264,7 +318,7 @@ export function ClusteredMarkers({
             position={[request.lat, request.lng]}
             icon={icon}
           >
-            <Popup>
+            <Popup closeOnClick={false} autoClose={false} closeButton={true}>
               <Card className="p-3 w-64">
                 <div className="space-y-2">
                   <div className="flex items-start justify-between">
@@ -327,7 +381,7 @@ export function ClusteredMarkers({
             position={[volunteer.lat, volunteer.lng]}
             icon={icon}
           >
-            <Popup>
+            <Popup closeOnClick={false} autoClose={false} closeButton={true}>
               <Card className="p-3 w-64">
                 <div className="space-y-2">
                   <div className="flex items-start justify-between">
