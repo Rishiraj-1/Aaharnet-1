@@ -308,7 +308,7 @@ export default function NGODashboard() {
               <Badge className="bg-rose-500/20 text-rose-700 dark:text-rose-400 border-rose-500/30">
                 Top NGO
               </Badge>
-            </div>
+          </div>
             <p className="text-sm font-medium text-muted-foreground mb-1">Distributions</p>
             <p className="text-3xl font-bold mb-1">{completedDistributions}</p>
             <p className="text-xs text-muted-foreground">Completed</p>
@@ -376,8 +376,8 @@ export default function NGODashboard() {
                 </p>
                 <Link href="/ngo/requests">
                   <Button className="bg-gradient-to-r from-teal-500 to-teal-600">
-                    Create Request
-                  </Button>
+                  Create Request
+                </Button>
                 </Link>
               </div>
             )}
@@ -393,7 +393,7 @@ export default function NGODashboard() {
                 <h2 className="text-xl font-bold">AI Insights</h2>
                 <p className="text-sm text-muted-foreground">Smart recommendations</p>
               </div>
-            </div>
+          </div>
 
             {forecast && forecast.recommendations ? (
               <div className="space-y-4">
@@ -446,8 +446,8 @@ export default function NGODashboard() {
                 <div className="p-2 rounded-lg bg-teal-500/10">
                   <MapPin className="h-5 w-5 text-teal-500" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">Nearby Donors (AI-Matched)</h2>
+          <div>
+              <h2 className="text-xl font-bold">Nearby Donors (AI-Matched)</h2>
                   <p className="text-sm text-muted-foreground">{nearbyDonors.length} found within 10km</p>
                 </div>
               </div>

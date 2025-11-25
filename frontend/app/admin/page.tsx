@@ -185,18 +185,18 @@ export default function AdminDashboard() {
                 </div>
                 <h1 className="text-4xl font-bold mb-2">
                   AAHARNET.AI Platform Control 🛡️
-                </h1>
+              </h1>
                 <p className="text-lg text-white/90 mb-6">
                   Monitoring <span className="font-bold">{allUsers?.length || 0}</span> users across the platform
-                </p>
+              </p>
                 
                 {/* System Stats in Hero */}
                 <div className="grid grid-cols-3 gap-4 mt-6">
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                     <p className="text-sm text-white/80 mb-1">System Status</p>
-                    <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${backendHealth?.status === 'healthy' ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                      <p className="text-lg font-bold">{backendHealth?.status || 'Checking...'}</p>
+                <p className="text-lg font-bold">{backendHealth?.status || 'Checking...'}</p>
                     </div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
@@ -238,7 +238,7 @@ export default function AdminDashboard() {
               </div>
               <h3 className="font-bold text-lg mb-1">View Analytics</h3>
               <p className="text-sm text-muted-foreground">Platform insights</p>
-            </Card>
+        </Card>
           </Link>
           
           <Link href="/admin/emergency">
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
         {/* Emergency Alerts & System Health */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Emergency Alerts */}
-          {emergencyAlerts.length > 0 && (
+        {emergencyAlerts.length > 0 && (
             <Card className="lg:col-span-2 p-6 shadow-lg border-0 bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent border-red-500/30">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-red-500/20">
@@ -342,24 +342,24 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="space-y-3">
-                {emergencyAlerts.slice(0, 3).map((alert: any, idx: number) => (
+                  {emergencyAlerts.slice(0, 3).map((alert: any, idx: number) => (
                   <div key={idx} className="p-4 rounded-xl bg-background/50 border border-red-500/20">
                     <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-semibold">{alert.alert_type || 'Emergency Alert'}</p>
-                        <p className="text-sm text-muted-foreground">{alert.description}</p>
-                      </div>
+                        <div>
+                          <p className="font-semibold">{alert.alert_type || 'Emergency Alert'}</p>
+                          <p className="text-sm text-muted-foreground">{alert.description}</p>
+                        </div>
                       <Badge className={cn(
                         "text-xs",
                         alert.severity === 'critical' && "bg-red-500 text-white",
                         alert.severity === 'high' && "bg-orange-500 text-white",
                         "bg-yellow-500 text-black"
                       )}>
-                        {alert.severity}
+                          {alert.severity}
                       </Badge>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
               <Link href="/admin/emergency">
                 <Button variant="outline" className="w-full mt-4 border-red-500/50 text-red-700 dark:text-red-400 hover:bg-red-500/10">
@@ -367,8 +367,8 @@ export default function AdminDashboard() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
-            </Card>
-          )}
+          </Card>
+        )}
 
           {/* System Health */}
           <Card className="p-6 shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
@@ -464,7 +464,7 @@ export default function AdminDashboard() {
                 <p className="text-sm text-muted-foreground">Volunteers</p>
               </div>
             </div>
-          </Card>
+              </Card>
 
           {/* Admin Actions */}
           <Card className="p-6 shadow-lg border-0 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent">
@@ -476,7 +476,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold">Admin Controls</h2>
                 <p className="text-sm text-muted-foreground">Quick actions</p>
               </div>
-            </div>
+          </div>
             <div className="space-y-3">
               <Button 
                 variant="outline" 
@@ -525,32 +525,32 @@ export default function AdminDashboard() {
             <div className="p-4 rounded-xl bg-background/50 border border-border/50">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-purple-500" />
-                <p className="font-semibold text-sm">Platform Growth</p>
+                  <p className="font-semibold text-sm">Platform Growth</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {successRate}% donation success rate - Excellent performance!
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {successRate}% donation success rate - Excellent performance!
-              </p>
-            </div>
 
             <div className="p-4 rounded-xl bg-background/50 border border-border/50">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="w-4 h-4 text-blue-500" />
-                <p className="font-semibold text-sm">User Engagement</p>
+                  <p className="font-semibold text-sm">User Engagement</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {activeVolunteers} volunteers helping {activeNGOs} NGOs
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {activeVolunteers} volunteers helping {activeNGOs} NGOs
-              </p>
-            </div>
 
             <div className="p-4 rounded-xl bg-background/50 border border-border/50">
               <div className="flex items-center gap-2 mb-2">
                 <Heart className="w-4 h-4 text-rose-500" />
-                <p className="font-semibold text-sm">Impact Score</p>
+                  <p className="font-semibold text-sm">Impact Score</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {((totalFoodRedistributed / 1000) * 10).toFixed(0)}K impact points generated
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {((totalFoodRedistributed / 1000) * 10).toFixed(0)}K impact points generated
-              </p>
-            </div>
           </div>
         </Card>
       </div>

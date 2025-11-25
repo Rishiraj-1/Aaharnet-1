@@ -294,7 +294,7 @@ export default function VolunteerDashboard() {
               <Badge className="bg-rose-500/20 text-rose-700 dark:text-rose-400 border-rose-500/30">
                 Top 10%
               </Badge>
-            </div>
+          </div>
             <p className="text-sm font-medium text-muted-foreground mb-1">Impact Points</p>
             <p className="text-3xl font-bold mb-1">{impactPoints.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">Total points</p>
@@ -378,8 +378,8 @@ export default function VolunteerDashboard() {
                 </p>
                 <Link href="/volunteer/tasks">
                   <Button className="bg-gradient-to-r from-blue-500 to-blue-600">
-                    Find Available Tasks
-                  </Button>
+                  Find Available Tasks
+                </Button>
                 </Link>
               </div>
             )}
@@ -423,7 +423,7 @@ export default function VolunteerDashboard() {
                   />
                 </div>
               </div>
-            </div>
+          </div>
 
             <div className="pt-6 border-t">
               <div className="text-center p-4 rounded-lg bg-blue-500/5">
@@ -486,8 +486,8 @@ export default function VolunteerDashboard() {
                 <div className="p-2 rounded-lg bg-emerald-500/10">
                   <Package className="h-5 w-5 text-emerald-500" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">Available Tasks</h2>
+        <div>
+            <h2 className="text-xl font-bold">Available Tasks</h2>
                   <p className="text-sm text-muted-foreground">{availableTasks.length} tasks available</p>
                 </div>
               </div>
@@ -497,8 +497,8 @@ export default function VolunteerDashboard() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {availableTasks.slice(0, 6).map((task) => (
                 <Card key={task.id} className="p-4 hover:shadow-lg transition-all border-2 hover:border-emerald-500/50 bg-gradient-to-br from-card to-muted/30">
                   <div className="flex items-center gap-2 mb-3">
@@ -514,8 +514,8 @@ export default function VolunteerDashboard() {
                   </p>
                   <Link href="/volunteer/tasks">
                     <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">
-                      Accept Task
-                    </Button>
+                    Accept Task
+                  </Button>
                   </Link>
                 </Card>
               ))}
