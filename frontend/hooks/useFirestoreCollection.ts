@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { collection, onSnapshot, query, orderBy, limit, where, WhereFilterOp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { toast } from 'sonner'
 
 interface UseFirestoreCollectionOptions {
   orderByField?: string
@@ -72,7 +71,6 @@ export function useFirestoreCollection<T = any>(
           console.error('Firestore error:', err)
           setError(err)
           setLoading(false)
-          toast.error('Failed to load data from database')
         }
       )
 
